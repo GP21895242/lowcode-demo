@@ -1,61 +1,60 @@
-import { EditOutlined, PlusOutlined } from '@ant-design/icons';
-import { Button, Drawer, Form, Input, Space, Tooltip } from 'antd';
-import { useRef, useState } from 'react';
+import { EditOutlined, PlusOutlined } from "@ant-design/icons";
+import { Button, Drawer, Form, Input, Space, Tooltip } from "antd";
+import { useRef, useState } from "react";
 import { arrayMove } from "react-sortable-hoc";
-import CommonSetter from '../../common/common-setter';
-import SortableList from '../../common/sortable-list';
-import FlowEvent from '../../layouts/flow-event';
+import CommonSetter from "../../common/common-setter";
+import SortableList from "../../common/sortable-list";
+import FlowEvent from "../../layouts/flow-event";
 
 const setter = [
   {
-    name: 'type',
-    label: '类型',
-    type: 'select',
+    name: "type",
+    label: "类型",
+    type: "select",
     options: [
       {
-        label: '文本',
-        value: 'text',
+        label: "文本",
+        value: "text",
       },
       {
-        label: '日期',
-        value: 'date',
+        label: "日期",
+        value: "date",
       },
       {
-        label: '操作',
-        value: 'option',
+        label: "操作",
+        value: "option",
       },
     ],
   },
   {
-    name: 'title',
-    label: '标题',
-    type: 'input',
+    name: "title",
+    label: "标题",
+    type: "input",
   },
   {
-    name: 'dataIndex',
-    label: '字段',
-    type: 'input',
+    name: "dataIndex",
+    label: "字段",
+    type: "input",
   },
 ];
 
 function OptionsFormItem({ value = [], onChange }: any) {
-
   const [open, setOpen] = useState(false);
   const [curItem, setCurItem] = useState<any>({});
-  const flowEventRef = useRef<any>();
+  const flowEventRef = useRef<any>(null);
 
   function changeHandle(val: string, item: any) {
     item.label = val;
     onChange([...value]);
   }
 
-  function sortEndHanlde({ oldIndex, newIndex }: { oldIndex: number; newIndex: number; }) {
+  function sortEndHanlde({ oldIndex, newIndex }: { oldIndex: number; newIndex: number }) {
     onChange(arrayMove(value, oldIndex, newIndex));
   }
 
   function save() {
     const val = flowEventRef.current?.save();
-    curItem.event = val;
+    setCurItem((prev: any) => ({ ...prev, event: val }));
     onChange([...value]);
     setOpen(false);
     setCurItem({});
@@ -63,8 +62,10 @@ function OptionsFormItem({ value = [], onChange }: any) {
 
   return (
     <div>
-      <div className="h-[32px] flex items-center bg-[#f7f8fa] px-[16px] rounded-2px font-semibold">操作</div>
-      <div className='w-[100%] p-[20px]'>
+      <div className="h-[32px] flex items-center bg-[#f7f8fa] px-[16px] rounded-2px font-semibold">
+        操作
+      </div>
+      <div className="w-[100%] p-[20px]">
         <SortableList
           items={value || []}
           hiddenEdit
@@ -76,10 +77,18 @@ function OptionsFormItem({ value = [], onChange }: any) {
           itemRender={(item: any) => (
             <Space>
               <div
-                className='w-[140px] text-[14px] text-[rgb(0,0,0)]'
-                style={{ fontFamily: "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans',sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol','Noto Color Emoji'" }}
+                className="w-[140px] text-[14px] text-[rgb(0,0,0)]"
+                style={{
+                  fontFamily:
+                    "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans',sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol','Noto Color Emoji'",
+                }}
               >
-                <Input onChange={(e) => { changeHandle(e.target.value, item) }} value={item.label} />
+                <Input
+                  onChange={(e) => {
+                    changeHandle(e.target.value, item);
+                  }}
+                  value={item.label}
+                />
               </div>
               <Tooltip title="设置点击事件">
                 <EditOutlined
@@ -96,17 +105,13 @@ function OptionsFormItem({ value = [], onChange }: any) {
           onSortEnd={sortEndHanlde}
         />
       </div>
-      <div
-        className='px-[20px]'
-      >
+      <div className="px-[20px]">
         <Button
-          icon={(
-            <PlusOutlined />
-          )}
+          icon={<PlusOutlined />}
           block
-          type='dashed'
+          type="dashed"
           onClick={() => {
-            onChange([...value, { key: new Date().getTime(), label: '' }]);
+            onChange([...value, { key: new Date().getTime(), label: "" }]);
           }}
         >
           添加
@@ -117,15 +122,14 @@ function OptionsFormItem({ value = [], onChange }: any) {
         width="100vw"
         open={open}
         zIndex={1005}
-        onClose={() => { setOpen(false); }}
-        extra={(
-          <Button
-            type='primary'
-            onClick={save}
-          >
+        onClose={() => {
+          setOpen(false);
+        }}
+        extra={
+          <Button type="primary" onClick={save}>
             保存
           </Button>
-        )}
+        }
         push={false}
         destroyOnClose
         styles={{ body: { padding: 0 } }}
@@ -133,26 +137,24 @@ function OptionsFormItem({ value = [], onChange }: any) {
         <FlowEvent flowData={curItem?.event} ref={flowEventRef} />
       </Drawer>
     </div>
-  )
+  );
 }
 
-
 function Setter() {
-
   const form = Form.useFormInstance();
 
-  const type = Form.useWatch('type', form);
+  const type = Form.useWatch("type", form);
 
   return (
     <>
       <CommonSetter setters={setter} />
-      {type === 'option' && (
+      {type === "option" && (
         <Form.Item noStyle name="options">
           <OptionsFormItem />
         </Form.Item>
       )}
     </>
-  )
+  );
 }
 
 export default Setter;

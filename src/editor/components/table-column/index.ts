@@ -1,17 +1,17 @@
-import {Context} from '../../interface';
-import {ItemType} from '../../item-type';
-import Dev from './dev';
-import Prod from './prod';
-import Setter from './setter';
+import type { Context } from "../../interface";
+import { ItemType } from "../../item-type";
+import Dev from "./dev";
+import Prod from "./prod";
+import Setter from "./setter";
 
 export default (ctx: Context) => {
   ctx.registerComponent(ItemType.TableColumn, {
     name: ItemType.TableColumn,
-    desc: '表格列',
+    desc: "表格列",
     defaultProps: () => {
       return {
-        dataIndex: {type: 'static', value: `col_${new Date().getTime()}`},
-        title: {type: 'static', value: '标题'},
+        dataIndex: { type: "static", value: `col_${new Date().getTime()}` },
+        title: { type: "static", value: "标题" },
       };
     },
     dev: Dev,
@@ -43,7 +43,7 @@ export default (ctx: Context) => {
     //     type: 'input',
     //   },
     // ],
-    setter: Setter,
+    setter: Setter as any,
     order: 5,
     allowDrag: [ItemType.Table],
   });

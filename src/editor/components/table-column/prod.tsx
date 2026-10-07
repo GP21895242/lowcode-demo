@@ -1,5 +1,5 @@
 const TableColumn = () => {
-  return <></>
-}
+  return <></>;
+};
 
 export default TableColumn;

@@ -1,3 +1,3 @@
-const SearchFormItem = () => <></>
+const SearchFormItem = () => <></>;
 
 export default SearchFormItem;

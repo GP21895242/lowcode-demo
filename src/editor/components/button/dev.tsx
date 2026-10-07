@@ -1,10 +1,12 @@
-import { Button as AntdButton } from 'antd';
-import { CommonComponentProps } from '../../interface';
+import { Button as AntdButton } from "antd";
+import type { CommonComponentProps } from "../../interface";
 
 const Button = ({ _id, type, text }: CommonComponentProps) => {
   return (
-    <AntdButton data-component-id={_id} type={type}>{text}</AntdButton>
-  )
-}
+    <AntdButton data-component-id={_id} type={type}>
+      {text}
+    </AntdButton>
+  );
+};
 
-export default (Button);
+export default Button;

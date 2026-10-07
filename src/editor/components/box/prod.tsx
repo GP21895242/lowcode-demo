@@ -1,10 +1,7 @@
-import { CommonComponentProps } from '../../interface';
-
+import type { CommonComponentProps } from "../../interface";
 
 const Box = (props: CommonComponentProps) => {
-  return (
-    <div>{props.children}</div>
-  )
-}
+  return <div>{props.children}</div>;
+};
 
-export default (Box);
+export default Box;

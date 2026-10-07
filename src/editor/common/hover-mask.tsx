@@ -1,28 +1,20 @@
-
-import { Dropdown, Space } from 'antd';
-import {
-  forwardRef,
-  useEffect,
-  useImperativeHandle,
-  useMemo,
-  useState,
-} from 'react';
-import { createPortal } from 'react-dom';
-import { useComponentConfigStore } from '../stores/component-config';
-import { useComponetsStore } from '../stores/components';
-import { getComponentById } from '../utils/utils';
+import { Dropdown, Space } from "antd";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
+import { useComponentConfigStore } from "../stores/component-config";
+import { useComponetsStore } from "../stores/components";
+import { getComponentById } from "../utils/utils";
 
 interface Props {
   // 容器class
-  containerClassName: string,
+  containerClassName: string;
   // 相对容器class
-  offsetContainerClassName: string
+  offsetContainerClassName: string;
   // 组件id
   componentId: number;
 }
 
 function HoverMask({ containerClassName, offsetContainerClassName, componentId }: Props, ref: any) {
-
   const [position, setPosition] = useState({
     left: 0,
     top: 0,
@@ -38,12 +30,12 @@ function HoverMask({ containerClassName, offsetContainerClassName, componentId }
 
   // 对外暴露更新位置方法
   useImperativeHandle(ref, () => ({
-    updatePosition,
+    updatePosition: () => updatePosition(),
   }));
 
   useEffect(() => {
     updatePosition();
-  }, [componentId]);
+  }, [componentId, updatePosition]);
 
   function updatePosition() {
     if (!componentId) return;
@@ -80,11 +72,9 @@ function HoverMask({ containerClassName, offsetContainerClassName, componentId }
 
   const curComponent = useMemo(() => {
     return getComponentById(componentId, components);
-  }, [componentId]);
-
+  }, [componentId, components]);
 
   const parentComponents = useMemo(() => {
-
     const parentComponents = [];
     let component = getComponentById(componentId, components);
 
@@ -94,12 +84,9 @@ function HoverMask({ containerClassName, offsetContainerClassName, componentId }
     }
 
     return parentComponents;
+  }, [curComponent, components, componentId]);
 
-  }, [curComponent]);
-
-
-
-  return createPortal((
+  return createPortal(
     <>
       <div
         style={{
@@ -113,7 +100,7 @@ function HoverMask({ containerClassName, offsetContainerClassName, componentId }
           height: position.height,
           zIndex: 12,
           borderRadius: 4,
-          boxSizing: 'border-box',
+          boxSizing: "border-box",
         }}
       />
       <div
@@ -124,43 +111,43 @@ function HoverMask({ containerClassName, offsetContainerClassName, componentId }
           fontSize: "14px",
           color: "#ff4d4f",
           zIndex: 13,
-          display: (!position.width || position.width < 10) ? "none" : "inline",
-          transform: 'translate(-100%, -100%)',
+          display: !position.width || position.width < 10 ? "none" : "inline",
+          transform: "translate(-100%, -100%)",
         }}
       >
         <Space>
           <Dropdown
             menu={{
-              items: parentComponents.map(item => ({
-                key: item?.id || '',
+              items: parentComponents.map((item) => ({
+                key: item?.id || "",
                 label: item?.name,
               })),
               onClick: ({ key }) => {
                 setCurComponentId(Number(key));
-              }
+              },
             }}
-            placement='bottomRight'
+            placement="bottomRight"
             disabled={parentComponents.length === 0}
-            getPopupContainer={node => node.parentElement!}
+            getPopupContainer={(node) => node.parentElement!}
           >
             <div
               style={{
-                padding: '0 8px',
-                backgroundColor: '#1890ff',
+                padding: "0 8px",
+                backgroundColor: "#1890ff",
                 borderRadius: 4,
-                color: '#fff',
+                color: "#fff",
                 cursor: "pointer",
-                whiteSpace: 'nowrap',
+                whiteSpace: "nowrap",
               }}
             >
-              {componentConfig[curComponent?.name || '']?.desc}
+              {componentConfig[curComponent?.name || ""]?.desc}
             </div>
           </Dropdown>
         </Space>
       </div>
-    </>
-
-  ), document.querySelector(`.${containerClassName}`)!)
+    </>,
+    document.querySelector(`.${containerClassName}`)!,
+  );
 }
 
 export default forwardRef(HoverMask);

@@ -1,4 +1,4 @@
-import {create} from 'zustand';
+import { create } from "zustand";
 
 interface State {
   data: any;
@@ -27,8 +27,7 @@ interface Action {
 
 export const usePageDataStore = create<State & Action>((set) => ({
   data: {},
-  setData: (key, value) =>
-    set((state) => ({data: {...state.data, [key]: value}})),
-  mergeData: (data) => set((state) => ({data: {...state.data, ...data}})),
-  resetData: () => set({data: {}}),
+  setData: (key, value) => set((state) => ({ data: { ...state.data, [key]: value } })),
+  mergeData: (data) => set((state) => ({ data: { ...state.data, ...data } })),
+  resetData: () => set({ data: {} }),
 }));

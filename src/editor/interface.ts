@@ -30,13 +30,13 @@ export interface ComponentConfig {
   defaultProps?:
     | {
         [key: string]: {
-          type: 'variable' | 'static';
+          type: "variable" | "static";
           value: any;
         };
       }
     | (() => {
         [key: string]: {
-          type: 'variable' | 'static';
+          type: "variable" | "static";
           value: any;
         };
       });
@@ -51,7 +51,7 @@ export interface ComponentConfig {
   /**
    * 组件属性配置
    */
-  setter?: any | ComponentSetter[];
+  setter?: ComponentSetter[];
   /**
    * 组件方法
    */

@@ -1,6 +1,6 @@
 export const defaultLayout = {
-  type: 'compactBox',
-  direction: 'TB',
+  type: "compactBox",
+  direction: "TB",
   getId: function getId(d: any) {
     return d.id;
   },

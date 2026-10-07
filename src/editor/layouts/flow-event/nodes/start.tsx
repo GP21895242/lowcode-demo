@@ -1,13 +1,13 @@
-import {EXPAND_ICON} from '../icons';
+import { EXPAND_ICON } from "../icons";
 
 export const startNode: any = {
   options: {
     style: {
-      fill: '#E6F7FF',
+      fill: "#E6F7FF",
       radius: 8,
       lineWidth: 1,
-      stroke: '#1890FF',
-      fillOpacity: '0.95',
+      stroke: "#1890FF",
+      fillOpacity: "0.95",
     },
     stateStyles: {
       hover: {},
@@ -15,10 +15,10 @@ export const startNode: any = {
     },
     labelCfg: {
       style: {
-        fill: '#000000',
+        fill: "#000000",
         fontSize: 14,
         fontWeight: 400,
-        fillOpacity: '0.7',
+        fillOpacity: "0.7",
       },
     },
     size: [120, 40],
@@ -27,7 +27,7 @@ export const startNode: any = {
     const styles = this.getShapeStyle(cfg);
     const h = styles.height;
 
-    const keyShape = group.addShape('rect', {
+    const keyShape = group.addShape("rect", {
       attrs: {
         x: 0,
         y: 0,
@@ -35,17 +35,17 @@ export const startNode: any = {
       },
     });
 
-    group.addShape('marker', {
+    group.addShape("marker", {
       attrs: {
         x: 0,
         y: h / 2 + 7,
         r: 6,
-        stroke: '#73d13d',
-        cursor: 'pointer',
+        stroke: "#73d13d",
+        cursor: "pointer",
         symbol: EXPAND_ICON,
       },
       // must be assigned in G6 3.3 and later versions. it can be any string you want, but should be unique in a custom item type
-      name: 'add-item',
+      name: "add-item",
     });
 
     return keyShape;

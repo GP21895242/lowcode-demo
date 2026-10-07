@@ -1,5 +1,5 @@
-import { Dropdown } from 'antd';
-import React from 'react';
+import { Dropdown } from "antd";
+import React from "react";
 
 interface Props {
   position: {
@@ -7,7 +7,7 @@ interface Props {
     left?: number;
   };
   onSelect: (item: any) => void;
-  items: { label: string, key: string }[];
+  items: { label: string; key: string }[];
   open: boolean;
 }
 
@@ -17,15 +17,15 @@ const ContextMenu: React.FC<Props> = (props) => {
   return (
     <div
       style={{
-        position: 'absolute',
+        position: "absolute",
         top: position?.top,
         left: position?.left,
       }}
     >
       <Dropdown
         menu={{
-          items: items.map(item => ({ label: item.label, key: item.key })),
-          onClick: onSelect
+          items: items.map((item) => ({ label: item.label, key: item.key })),
+          onClick: onSelect,
         }}
         open={open}
       >
@@ -33,6 +33,6 @@ const ContextMenu: React.FC<Props> = (props) => {
       </Dropdown>
     </div>
   );
-}
+};
 
 export default ContextMenu;

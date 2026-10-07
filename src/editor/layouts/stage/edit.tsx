@@ -1,17 +1,15 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import HoverMask from '../../common/hover-mask';
-import SelectedMask from '../../common/selected-mask';
-import { useComponentConfigStore } from '../../stores/component-config';
-import { Component, useComponetsStore } from '../../stores/components';
-
+import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import HoverMask from "../../common/hover-mask";
+import SelectedMask from "../../common/selected-mask";
+import { useComponentConfigStore } from "../../stores/component-config";
+import type { Component } from "../../stores/components";
+import { useComponetsStore } from "../../stores/components";
 
 const EditStage = (_: any, ref: any) => {
-
   const { components, curComponentId, setCurComponentId } = useComponetsStore();
   const { componentConfig } = useComponentConfigStore();
 
   const [hoverComponentId, setHoverComponentId] = useState();
-
 
   const selectedMaskRef = useRef<any>(null);
 
@@ -21,9 +19,9 @@ const EditStage = (_: any, ref: any) => {
         if (selectedMaskRef?.current) {
           selectedMaskRef.current.updatePosition();
         }
-      }
-    }
-  }, [])
+      },
+    };
+  }, []);
 
   // 组件改变后，重新渲染遮罩
   useEffect(() => {
@@ -51,16 +49,15 @@ const EditStage = (_: any, ref: any) => {
     let container = document.querySelector(".stage");
 
     if (container) {
-      container.addEventListener('click', createMask, true);
+      container.addEventListener("click", createMask, true);
     }
     return () => {
       container = document.querySelector(".stage");
       if (container) {
         container.removeEventListener("click", createMask, true);
       }
-    }
-  }, []);
-
+    };
+  }, [setCurComponentId]);
 
   useEffect(() => {
     function createMask(e: any) {
@@ -90,25 +87,24 @@ const EditStage = (_: any, ref: any) => {
     let container = document.querySelector(".stage");
 
     if (container) {
-      container.addEventListener('mouseover', createMask, true);
-      container.addEventListener('mouseleave', removerMask);
+      container.addEventListener("mouseover", createMask, true);
+      container.addEventListener("mouseleave", removerMask);
     }
     return () => {
       container = document.querySelector(".stage");
       if (container) {
         container.removeEventListener("mouseover", createMask, true);
-        container.removeEventListener('mouseleave', removerMask);
+        container.removeEventListener("mouseleave", removerMask);
       }
-    }
+    };
   }, [curComponentId]);
 
   function formatProps(component: Component) {
     const props = Object.keys(component.props || {}).reduce<any>((prev, cur) => {
-
-      if (typeof component.props[cur] === 'object') {
-        if (component.props[cur]?.type === 'static') {
+      if (typeof component.props[cur] === "object") {
+        if (component.props[cur]?.type === "static") {
           prev[cur] = component.props[cur].value;
-        } else if (component.props[cur]?.type === 'variable') {
+        } else if (component.props[cur]?.type === "variable") {
           const variableName = component.props[cur].value;
           prev[cur] = `\${${variableName}}`;
         }
@@ -117,7 +113,6 @@ const EditStage = (_: any, ref: any) => {
       }
 
       return prev;
-
     }, {});
 
     return props;
@@ -125,7 +120,6 @@ const EditStage = (_: any, ref: any) => {
 
   function renderComponents(components: Component[]): React.ReactNode {
     return components.map((component: Component) => {
-
       if (!componentConfig?.[component.name]?.dev) {
         return null;
       }
@@ -141,34 +135,32 @@ const EditStage = (_: any, ref: any) => {
           ...component.props,
           ...props,
         },
-        renderComponents(component.children || [])
-      )
-    })
+        renderComponents(component.children || []),
+      );
+    });
   }
 
   return (
-    <div className='h-[100%] stage'>
-      <React.Suspense fallback="loading...">
-        {renderComponents(components)}
-      </React.Suspense>
+    <div className="h-[100%] stage">
+      <React.Suspense fallback="loading...">{renderComponents(components)}</React.Suspense>
       {curComponentId && (
         <SelectedMask
-          containerClassName='select-mask-container'
-          offsetContainerClassName='stage'
+          containerClassName="select-mask-container"
+          offsetContainerClassName="stage"
           ref={selectedMaskRef}
         />
       )}
       {hoverComponentId && (
         <HoverMask
-          containerClassName='select-mask-container'
-          offsetContainerClassName='stage'
+          containerClassName="select-mask-container"
+          offsetContainerClassName="stage"
           ref={selectedMaskRef}
           componentId={hoverComponentId}
         />
       )}
       <div className="select-mask-container" />
     </div>
-  )
-}
+  );
+};
 
 export default forwardRef(EditStage);

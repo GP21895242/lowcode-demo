@@ -1,6 +1,6 @@
-import {create} from 'zustand';
-import {createJSONStorage, persist} from 'zustand/middleware';
-import {getComponentById} from '../utils/utils';
+import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
+import { getComponentById } from "../utils/utils";
 
 export interface Component {
   /**
@@ -28,7 +28,7 @@ export interface Component {
    */
   desc?: string;
   hidden?: {
-    type: 'static' | 'variable';
+    type: "static" | "variable";
     value: any;
   };
 }
@@ -37,8 +37,8 @@ interface State {
   components: Component[];
   curComponentId?: number | null;
   curComponent: Component | null;
-  mode: 'edit' | 'preview';
-  editType: 'page' | 'event';
+  mode: "edit" | "preview";
+  editType: "page" | "event";
 }
 
 interface Action {
@@ -69,23 +69,19 @@ interface Action {
    * @param value value
    * @returns
    */
-  updateComponent: (
-    componentId: number,
-    key: keyof Component,
-    value: any
-  ) => void;
+  updateComponent: (componentId: number, key: keyof Component, value: any) => void;
   /**
    * 设置模式
    * @param mode 模式
    * @returns
    */
-  setMode: (mode: State['mode']) => void;
+  setMode: (mode: State["mode"]) => void;
   /**
    *  设置编辑类型
    * @param editType
    * @returns
    */
-  setEditType: (editType: State['editType']) => void;
+  setEditType: (editType: State["editType"]) => void;
   /**
    * 删除组件
    * @param componentId 组件id
@@ -100,23 +96,20 @@ export const useComponetsStore = create(
       components: [
         {
           id: 1,
-          name: 'Page',
+          name: "Page",
           props: {},
-          desc: '页面',
+          desc: "页面",
         },
       ],
       curComponent: null,
-      mode: 'edit',
-      editType: 'page',
+      mode: "edit",
+      editType: "page",
       addComponent: (component, parentId) =>
         set((state) => {
           // 如果有上级id，把当前组件添加到父组件的子组件中
           if (parentId) {
             // 通过父id递归查找父组件
-            const parentComponent = getComponentById(
-              parentId,
-              state.components
-            );
+            const parentComponent = getComponentById(parentId, state.components);
 
             if (parentComponent) {
               if (parentComponent?.children) {
@@ -127,9 +120,9 @@ export const useComponetsStore = create(
             }
 
             component.parentId = parentId;
-            return {components: [...state.components]};
+            return { components: [...state.components] };
           }
-          return {components: [...state.components, component]};
+          return { components: [...state.components, component] };
         }),
       setCurComponentId: (componentId) =>
         set((state) => ({
@@ -140,7 +133,7 @@ export const useComponetsStore = create(
         set((state) => {
           const component = getComponentById(componentId, state.components);
           if (component) {
-            component.props = {...component.props, ...props};
+            component.props = { ...component.props, ...props };
 
             if (componentId === state.curComponentId) {
               return {
@@ -149,58 +142,51 @@ export const useComponetsStore = create(
               };
             }
 
-            return {components: [...state.components]};
+            return { components: [...state.components] };
           }
 
-          return {components: [...state.components]};
+          return { components: [...state.components] };
         }),
-      updateComponent: (
-        componentId: number,
-        key: keyof Component,
-        value: any
-      ) =>
+      updateComponent: (componentId: number, key: keyof Component, value: any) =>
         set((state) => {
           const component = getComponentById(componentId, state.components);
           if (component) {
-            if (key === 'desc') {
+            if (key === "desc") {
               component[key] = value;
-            } else if (key === 'hidden') {
+            } else if (key === "hidden") {
               component[key] = value;
             }
-            return {components: [...state.components]};
+            return { components: [...state.components] };
           }
-          return {components: [...state.components]};
+          return { components: [...state.components] };
         }),
-      setMode: (mode) => set({mode}),
-      setEditType: (editType) => set({editType}),
+      setMode: (mode) => set({ mode }),
+      setEditType: (editType) => set({ editType }),
       deleteComponent: (componentId) => {
         if (!componentId) return;
 
         const component = getComponentById(componentId, get().components);
         if (component?.parentId) {
-          const parentComponent = getComponentById(
-            component.parentId,
-            get().components
-          );
+          const parentComponent = getComponentById(component.parentId, get().components);
 
           if (parentComponent) {
             parentComponent.children = parentComponent?.children?.filter(
-              (item) => item.id !== +componentId
+              (item) => item.id !== +componentId,
             );
 
-            set({components: [...get().components]});
+            set({ components: [...get().components] });
           }
         }
       },
     }),
     {
-      name: 'components',
+      name: "components",
       storage: createJSONStorage(() => localStorage),
       // 只需要持久化components属性，把其他值过滤掉
       partialize: (state) =>
         Object.fromEntries(
-          Object.entries(state).filter(([key]) => ['components'].includes(key))
+          Object.entries(state).filter(([key]) => ["components"].includes(key)),
         ) as any,
-    }
-  )
+    },
+  ),
 );

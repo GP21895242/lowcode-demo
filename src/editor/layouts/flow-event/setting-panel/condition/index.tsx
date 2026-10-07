@@ -1,7 +1,7 @@
 /* eslint-disable */
-import { Button, Space, Input, Modal } from 'antd';
-import { forwardRef, useImperativeHandle, useState } from 'react';
-import { SettingOutlined } from '@ant-design/icons'
+import { Button, Space, Input, Modal } from "antd";
+import { forwardRef, useImperativeHandle, useState } from "react";
+import { SettingOutlined } from "@ant-design/icons";
 
 function ConditionSettingPanel({ graphRef, curModel, setSettingOpen }: any, ref: any) {
   const [data, setData] = useState(curModel.current?.config || []);
@@ -20,18 +20,17 @@ function ConditionSettingPanel({ graphRef, curModel, setSettingOpen }: any, ref:
             return {
               key: item.id,
               label: item.name,
-              nodeType: 'action',
-              nodeName: '动作',
+              nodeType: "action",
+              nodeName: "动作",
               conditionId: item.id,
             };
           }),
         });
 
         setSettingOpen && setSettingOpen(false);
-      }
-    }
-  }, [data])
-
+      },
+    };
+  }, [data]);
 
   function nameChange(value: any, index: number) {
     setData((prev: any) => {
@@ -47,11 +46,10 @@ function ConditionSettingPanel({ graphRef, curModel, setSettingOpen }: any, ref:
     });
   }
 
-
   return (
     <div>
       <div style={{ marginTop: 0 }}>
-        <Space direction='vertical'>
+        <Space direction="vertical">
           {data.map((item: any, index: number) => {
             return (
               <Space key={item.id}>
@@ -63,25 +61,25 @@ function ConditionSettingPanel({ graphRef, curModel, setSettingOpen }: any, ref:
                   value={item.name}
                 />
                 <SettingOutlined
-                  className='cursor-pointer'
+                  className="cursor-pointer"
                   onClick={() => {
                     setCurIndex(index);
                     setConditionVisible(true);
                     setConditionValue(item.condition || `(function(ctx) { \n\n })(ctx)`);
                   }}
-                  style={{ color: item.condition && 'blue' }}
+                  style={{ color: item.condition && "blue" }}
                 />
               </Space>
             );
           })}
         </Space>
       </div>
-      <div className='mt-[20px]'>
+      <div className="mt-[20px]">
         <Button
           onClick={() => {
             setData((prev: any) => [...prev, { id: new Date().getTime().toString() }]);
           }}
-          type='primary'
+          type="primary"
         >
           添加条件
         </Button>
@@ -90,7 +88,9 @@ function ConditionSettingPanel({ graphRef, curModel, setSettingOpen }: any, ref:
         title="条件设置"
         open={conditionVisible}
         zIndex={1007}
-        onCancel={() => { setConditionVisible(false); }}
+        onCancel={() => {
+          setConditionVisible(false);
+        }}
         onOk={() => {
           conditionChange(conditionValue, curIndex);
           setConditionVisible(false);
@@ -98,7 +98,9 @@ function ConditionSettingPanel({ graphRef, curModel, setSettingOpen }: any, ref:
       >
         <Input.TextArea
           value={conditionValue}
-          onChange={e => { setConditionValue(e.target.value) }}
+          onChange={(e) => {
+            setConditionValue(e.target.value);
+          }}
           rows={10}
         />
       </Modal>

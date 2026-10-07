@@ -1,5 +1,5 @@
-import {create} from 'zustand';
-import {createJSONStorage, persist} from 'zustand/middleware';
+import { create } from "zustand";
+import { createJSONStorage, persist } from "zustand/middleware";
 export interface Variable {
   /**
    * 变量名
@@ -33,11 +33,11 @@ export const useVariablesStore = create(
   persist<State & Action>(
     (set) => ({
       variables: [],
-      setVariables: (variables) => set({variables}),
+      setVariables: (variables) => set({ variables }),
     }),
     {
-      name: 'variables',
+      name: "variables",
       storage: createJSONStorage(() => localStorage),
-    }
-  )
+    },
+  ),
 );
