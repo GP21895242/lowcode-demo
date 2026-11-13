@@ -1,6 +1,8 @@
-import { Modal, message } from "antd";
-import axios from "axios";
-import { get } from "lodash-es";
+﻿import axios from "axios";
+
+import { openConfirm } from "../common/confirm-dialog";
+import { toast } from "../../components/ui/toast";
+import { getByPath } from "../../lib/utils";
 import type { Node } from "../layouts/flow-event/data";
 import { getComponentRef } from "../stores/component-ref";
 import { usePageDataStore } from "../stores/page-data";
@@ -43,7 +45,7 @@ export function execEventFlow(nodes: Node[] = [], eventData?: any, initEventData
 
 async function confirmHandle(item: any, actionConfig: any, _: any, initEventData: any) {
   const { text } = actionConfig || {};
-  Modal.confirm({
+  openConfirm({
     title: "提示",
     content: text,
     zIndex: 100000,
@@ -68,7 +70,7 @@ async function requestHandle(item: any, actionConfig: any, eventData: any, initE
     // 解析代码里的变量
     const paramsValue = params.reduce((prev: any, cur: any) => {
       prev[cur.key] = cur.value.replace(/\{(.+)\}/g, (_: string, $2: string) => {
-        return get(
+        return getByPath(
           {
             eventData,
             initEventData,
@@ -141,7 +143,7 @@ async function setVariableHandle(item: any, actionConfig: any, eventData: any, i
     try {
       if (/\{(.+)\}/.test(value)) {
         value.replace(/\{(.+)\}/g, (_: string, $2: string) => {
-          const data = get(
+          const data = getByPath(
             {
               eventData,
               initEventData,
@@ -205,9 +207,9 @@ function showMessageHandle(item: any, actionConfig: any) {
   if (actionConfig?.type && actionConfig?.text) {
     try {
       if (actionConfig.type === "success") {
-        message.success(actionConfig.text);
+        toast.add({ title: actionConfig.text, type: "success" });
       } else if (actionConfig.type === "error") {
-        message.error(actionConfig.text);
+        toast.add({ title: actionConfig.text, type: "error" });
       }
 
       // 执行成功后，执行后续成功success事件

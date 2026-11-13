@@ -1,12 +1,12 @@
-import { Button as AntdButton } from "antd";
+import { Button } from "../../../components/ui/button";
 import type { CommonComponentProps } from "../../interface";
 
-const Button = ({ _id, type, text }: CommonComponentProps) => {
+const ButtonDev = ({ _id, type, text }: CommonComponentProps) => {
   return (
-    <AntdButton data-component-id={_id} type={type}>
+    <Button data-component-id={_id} variant={type === "default" ? "outline" : "default"}>
       {text}
-    </AntdButton>
+    </Button>
   );
 };
 
-export default Button;
+export default ButtonDev;

@@ -1,69 +1,95 @@
-import { Form, Input } from "antd";
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
+
+import { AppForm, useAppForm } from "../../../components/form";
+import { Input } from "../../../components/ui/input";
+import { Label } from "../../../components/ui/label";
 import CommonSetter from "../../common/common-setter";
+import SettingFormItemSwitch from "../../common/setting-form-item/switch";
 import { useComponentConfigStore } from "../../stores/component-config";
 import { useComponetsStore } from "../../stores/components";
-import SettingFormItemSwitch from "../../common/setting-form-item/switch";
+
+function Row({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="mb-3 flex items-start gap-3">
+      <Label className="w-[92px] shrink-0 pt-2 text-right text-sm font-normal text-muted-foreground">
+        {label}
+      </Label>
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
+  );
+}
 
 const ComponentAttr = () => {
-  const [form] = Form.useForm();
-
   const { curComponentId, curComponent, updateComponentProps, updateComponent } =
     useComponetsStore();
   const { componentConfig } = useComponentConfigStore();
 
-  useEffect(() => {
-    const data = form.getFieldsValue(true);
+  const form = useAppForm<any>({});
+  const resettingRef = useRef(false);
 
-    const newData = Object.keys(data).reduce((prev: any, key) => {
-      prev[key] = null;
-      return prev;
+  useEffect(() => {
+    resettingRef.current = true;
+
+    const previous = form.store.state.values || {};
+    const next = Object.keys(previous).reduce((acc: any, key) => {
+      acc[key] = null;
+      return acc;
     }, {});
 
-    // 初始化表单
-    form.setFieldsValue({ ...newData, ...curComponent?.props });
+    form.reset({ ...next, ...(curComponent?.props || {}) });
+
+    const timer = setTimeout(() => {
+      resettingRef.current = false;
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [curComponent, form]);
 
-  // 监听表单值变化，更新组件属性
-  function valueChange(changeValues: any) {
-    if (curComponentId) {
-      updateComponentProps(curComponentId, changeValues);
-    }
-  }
+  const handleValuesChange = useCallback(
+    (values: any) => {
+      if (resettingRef.current) return;
+      if (curComponentId) {
+        updateComponentProps(curComponentId, values);
+      }
+    },
+    [curComponentId, updateComponentProps],
+  );
 
   if (!curComponentId || !curComponent) return null;
 
+  const setter = componentConfig[curComponent?.name]?.setter;
+
   return (
-    <Form form={form} onValuesChange={valueChange} labelCol={{ span: 8 }} wrapperCol={{ span: 14 }}>
-      <Form.Item label="组件id">
+    <AppForm form={form} onValuesChange={handleValuesChange} className="py-2">
+      <Row label="组件id">
         <Input value={curComponent.id} disabled />
-      </Form.Item>
-      <Form.Item label="组件名称">
+      </Row>
+      <Row label="组件名称">
         <Input value={curComponent.name} disabled />
-      </Form.Item>
-      <Form.Item label="组件描述">
+      </Row>
+      <Row label="组件描述">
         <Input
-          onChange={(e) => {
-            updateComponent(curComponentId, "desc", e.target.value);
+          value={curComponent.desc ?? ""}
+          onChange={(event) => {
+            updateComponent(curComponentId, "desc", event.target.value);
           }}
-          value={curComponent.desc}
         />
-      </Form.Item>
-      <Form.Item label="隐藏">
+      </Row>
+      <Row label="隐藏">
         <SettingFormItemSwitch
+          value={curComponent.hidden}
           onChange={(value) => {
             updateComponent(curComponentId, "hidden", value);
           }}
-          value={curComponent.hidden}
         />
-      </Form.Item>
-      {componentConfig[curComponent?.name]?.setter &&
-        (!Array.isArray(componentConfig[curComponent?.name]?.setter) ? (
-          React.createElement(componentConfig[curComponent.name].setter! as any)
+      </Row>
+      {setter &&
+        (!Array.isArray(setter) ? (
+          React.createElement(setter as any)
         ) : (
-          <CommonSetter setters={componentConfig[curComponent.name].setter as any} />
+          <CommonSetter setters={setter as any} />
         ))}
-    </Form>
+    </AppForm>
   );
 };
 

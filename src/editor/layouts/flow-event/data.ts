@@ -19,6 +19,10 @@ export interface Menu {
    * 如果节点为条件节点，每个菜单表示一个条件
    */
   conditionId?: string;
+  /**
+   * 事件节点对应的 key
+   */
+  eventKey?: string;
 }
 
 export interface Node {
@@ -51,9 +55,22 @@ export interface Node {
    */
   conditionResult?: boolean;
   /**
+   * 节点所属条件 id
+   */
+  conditionId?: string;
+  /**
    * 节点事件key
    */
   eventKey?: string;
+}
+
+export interface SettingPanelProps {
+  /** 当前正在设置的节点 */
+  node: Node;
+  /** 更新某个节点（返回新的树） */
+  updateNode: (id: string, patch: Partial<Node>) => void;
+  /** 关闭设置面板 */
+  close: () => void;
 }
 
 export const data: Node = {

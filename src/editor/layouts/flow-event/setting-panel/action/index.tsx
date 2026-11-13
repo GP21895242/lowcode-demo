@@ -1,6 +1,15 @@
-import { useUpdateEffect } from "ahooks";
-import { Form, Select } from "antd";
-import React, { forwardRef, useImperativeHandle, useState } from "react";
+﻿import React, { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
+
+import { AppForm, useAppForm, useWatchValue } from "../../../../../components/form";
+import { Field } from "../../../../../components/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../../../../components/ui/select";
+import type { SettingPanelProps } from "../../data";
 import AsyncTaskSetting from "./async-task";
 import ComponentMethodSetting from "./component-method";
 import ConfirmSetting from "./confirm";
@@ -9,9 +18,7 @@ import RequestSetting from "./request";
 import SetVariableSetting from "./set-variable";
 import ShowMessageSetting from "./show-message";
 
-const FormItem = Form.Item;
-
-const actionMap: any = {
+const actionMap: Record<string, React.ComponentType> = {
   ShowMessage: ShowMessageSetting,
   ComponentMethod: ComponentMethodSetting,
   SetVariable: SetVariableSetting,
@@ -21,7 +28,7 @@ const actionMap: any = {
   Confirm: ConfirmSetting,
 };
 
-const EventActionTypesDesc: any = {
+const EventActionTypesDesc: Record<string, string> = {
   ShowMessage: "显示消息",
   ComponentMethod: "组件方法",
   SetVariable: "设置变量",
@@ -30,29 +37,44 @@ const EventActionTypesDesc: any = {
   Confirm: "显示确认框",
 };
 
-const ActionSettingPanel = (
-  { graphRef, curModel, setSettingOpen }: { graphRef: any; curModel: any; setSettingOpen: any },
-  ref: any,
-) => {
-  const [values, setValues] = useState<any>(curModel.current?.config || {});
+const actionOptions = Object.keys(actionMap)
+  .filter((key) => EventActionTypesDesc[key])
+  .map((key) => ({ label: EventActionTypesDesc[key], value: key }));
 
-  const [form] = Form.useForm();
+function ActionSettingPanel({ node, updateNode, close }: SettingPanelProps, ref: any) {
+  const form = useAppForm<{ type?: string; config?: Record<string, any> }>(
+    {
+      type: node.config?.type,
+      config: node.config?.config ?? {},
+    },
+    { onSubmit },
+  );
 
-  useUpdateEffect(() => {
-    form.setFieldsValue({
-      config: null,
-    });
-  }, [values.type, form]);
+  const type = useWatchValue(form, "type");
+  const initializedRef = useRef(false);
 
-  useImperativeHandle(ref, () => {
-    return {
+  useEffect(() => {
+    if (!initializedRef.current) {
+      initializedRef.current = true;
+      return;
+    }
+
+    form.setFieldValue("config", {});
+  }, [type, form]);
+
+  useImperativeHandle(
+    ref,
+    () => ({
       save: () => {
-        form.submit();
+        void form.handleSubmit();
       },
-    };
-  }, [form]);
+    }),
+    [form],
+  );
 
-  function save(config: any) {
+  function onSubmit(values: { type?: string; config?: Record<string, any> }) {
+    if (!values.type) return;
+
     let menus = [
       {
         label: "成功",
@@ -77,7 +99,7 @@ const ActionSettingPanel = (
       },
     ];
 
-    if (config.type === "Confirm") {
+    if (values.type === "Confirm") {
       menus = [
         {
           label: "确认",
@@ -96,43 +118,38 @@ const ActionSettingPanel = (
       ];
     }
 
-    graphRef.current.updateItem(curModel.current.id, {
-      ...curModel.current,
-      config,
+    updateNode(node.id, {
+      config: { type: values.type, config: values.config ?? {} },
       label: EventActionTypesDesc[values.type],
       menus,
     });
-    setSettingOpen(false);
+
+    close();
   }
 
-  function valueChange(_: any, allValues: any) {
-    setValues(allValues);
-  }
-
-  console.log(curModel.current?.config, "curModel.current?.config");
+  const SettingComponent = type ? actionMap[type] : null;
 
   return (
-    <Form
-      onValuesChange={valueChange}
-      labelCol={{ span: 8 }}
-      wrapperCol={{ span: 16 }}
-      form={form}
-      onFinish={save}
-      initialValues={curModel.current?.config}
-    >
-      <FormItem label="动作类型" name="type">
-        <Select
-          options={Object.keys(actionMap)
-            .filter((key) => EventActionTypesDesc[key])
-            .map((key) => ({
-              label: EventActionTypesDesc[key],
-              value: key,
-            }))}
-        />
-      </FormItem>
-      {actionMap[values.type] && React.createElement(actionMap[values.type], { values })}
-    </Form>
+    <AppForm form={form} className="py-2">
+      <Field name="type" label="动作类型">
+        {({ value, onChange }) => (
+          <Select value={value} onValueChange={onChange} items={actionOptions}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="请选择动作类型" />
+            </SelectTrigger>
+            <SelectContent>
+              {actionOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </Field>
+      {SettingComponent ? React.createElement(SettingComponent) : null}
+    </AppForm>
   );
-};
+}
 
 export default forwardRef(ActionSettingPanel);

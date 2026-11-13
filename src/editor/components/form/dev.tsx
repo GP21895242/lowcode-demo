@@ -1,27 +1,23 @@
-import { Form as AntdForm, Input } from "antd";
 import React, { useMemo } from "react";
+
+import { Input } from "../../../components/ui/input";
+import { Label } from "../../../components/ui/label";
 import { useDrop } from "../../hooks/use-drop";
 import type { CommonComponentProps } from "../../interface";
 
-function Form({ _id, _name, children, onSearch }: CommonComponentProps) {
-  const [form] = AntdForm.useForm();
-
+function FormDev({ _id, _name, children }: CommonComponentProps) {
   const { canDrop, drop } = useDrop(_id, _name);
 
-  const searchItems = useMemo(() => {
-    return React.Children.map(children, (item: any) => {
-      return {
+  const formItems = useMemo(() => {
+    return (
+      React.Children.map(children, (item: any) => ({
         label: item.props?.label,
         name: item.props?.name,
         type: item.props?.type,
         id: item.props?._id,
-      };
-    });
+      })) || []
+    );
   }, [children]);
-
-  const search = (values: any) => {
-    onSearch?.(values);
-  };
 
   if (!children?.length) {
     return (
@@ -29,7 +25,7 @@ function Form({ _id, _name, children, onSearch }: CommonComponentProps) {
         data-component-id={_id}
         // @ts-expect-error ConnectDropTarget type mismatch
         ref={drop}
-        className="p-[16px] flex justify-center"
+        className="flex justify-center p-[16px]"
         style={{ border: canDrop ? "1px solid #ccc" : "none" }}
       >
         暂无内容
@@ -45,22 +41,18 @@ function Form({ _id, _name, children, onSearch }: CommonComponentProps) {
       data-component-id={_id}
       style={{ border: canDrop ? "1px solid #ccc" : "none" }}
     >
-      <AntdForm labelCol={{ span: 5 }} wrapperCol={{ span: 18 }} form={form} onFinish={search}>
-        {searchItems.map((item: any) => {
-          return (
-            <AntdForm.Item
-              key={item.name}
-              data-component-id={item.id}
-              name={item.name}
-              label={item.label}
-            >
-              <Input />
-            </AntdForm.Item>
-          );
-        })}
-      </AntdForm>
+      <div className="flex flex-col gap-4">
+        {formItems.map((item: any) => (
+          <div key={item.name} className="flex items-center gap-3">
+            <Label className="w-[92px] shrink-0 text-right text-sm font-normal text-muted-foreground">
+              {item.label}
+            </Label>
+            <Input className="flex-1" disabled data-component-id={item.id} />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
-export default Form;
+export default FormDev;

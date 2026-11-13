@@ -1,9 +1,22 @@
-import { Button as AntdButton } from "antd";
+﻿import { Loader2 } from "lucide-react";
 import { forwardRef, useImperativeHandle, useState } from "react";
+
+import { Button } from "../../../components/ui/button";
 import type { CommonComponentProps } from "../../interface";
 
-const Button = (props: CommonComponentProps, ref: any) => {
+const OMIT_KEYS = ["_id", "_name", "_desc", "_execEventFlow", "type", "text", "children"];
+
+const ButtonProd = (props: CommonComponentProps, ref: any) => {
   const [loading, setLoading] = useState(false);
+
+  const { _id, type, text, children } = props;
+
+  const rest: Record<string, any> = {};
+  Object.entries(props).forEach(([key, value]) => {
+    if (!OMIT_KEYS.includes(key)) {
+      rest[key] = value;
+    }
+  });
 
   // 暴露方法，父组件可以使用ref获取组件里暴露出去的方法
   useImperativeHandle(ref, () => {
@@ -18,11 +31,17 @@ const Button = (props: CommonComponentProps, ref: any) => {
   }, []);
 
   return (
-    <AntdButton loading={loading} {...props}>
-      {props.text}
-    </AntdButton>
+    <Button
+      data-component-id={_id}
+      disabled={loading}
+      variant={type === "default" ? "outline" : "default"}
+      {...rest}
+    >
+      {loading ? <Loader2 className="animate-spin" /> : null}
+      {text}
+      {children}
+    </Button>
   );
 };
 
-// @ts-expect-error forwardRef type mismatch
-export default forwardRef(Button);
+export default forwardRef(ButtonProd as any);

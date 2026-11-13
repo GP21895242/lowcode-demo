@@ -1,29 +1,24 @@
-import { Button, Col, Form, Input, Row, Space } from "antd";
 import React, { useMemo } from "react";
+
+import { Button } from "../../../components/ui/button";
+import { Input } from "../../../components/ui/input";
+import { Label } from "../../../components/ui/label";
 import { useDrop } from "../../hooks/use-drop";
 import type { CommonComponentProps } from "../../interface";
 
-function SearchForm({ _id, _name, children, onSearch }: CommonComponentProps) {
-  const [form] = Form.useForm();
-
+function SearchFormDev({ _id, _name, children }: CommonComponentProps) {
   const { canDrop, drop } = useDrop(_id, _name);
 
   const searchItems = useMemo(() => {
-    return React.Children.map(children, (item: any) => {
-      console.log(item);
-
-      return {
+    return (
+      React.Children.map(children, (item: any) => ({
         label: item.props?.label,
         name: item.props?.name,
         type: item.props?.type,
         id: item.props?._id,
-      };
-    });
+      })) || []
+    );
   }, [children]);
-
-  const search = (values: any) => {
-    onSearch?.(values);
-  };
 
   if (!children?.length) {
     return (
@@ -31,7 +26,7 @@ function SearchForm({ _id, _name, children, onSearch }: CommonComponentProps) {
         data-component-id={_id}
         // @ts-expect-error ConnectDropTarget type mismatch
         ref={drop}
-        className="p-[16px] flex justify-center"
+        className="flex justify-center p-[16px]"
         style={{ border: canDrop ? "1px solid #ccc" : "none" }}
       >
         暂无内容
@@ -47,41 +42,22 @@ function SearchForm({ _id, _name, children, onSearch }: CommonComponentProps) {
       data-component-id={_id}
       style={{ border: canDrop ? "1px solid #ccc" : "none" }}
     >
-      <Form form={form} onFinish={search}>
-        <Row gutter={20}>
-          {searchItems.map((item: any) => {
-            return (
-              <Col span={6} key={item.name}>
-                <Form.Item data-component-id={item.id} name={item.name} label={item.label}>
-                  <Input />
-                </Form.Item>
-              </Col>
-            );
-          })}
-          <Col span={6}>
-            <Space>
-              <Button
-                onClick={() => {
-                  form.submit();
-                }}
-                type="primary"
-              >
-                搜索
-              </Button>
-              <Button
-                onClick={() => {
-                  form.resetFields();
-                  form.submit();
-                }}
-              >
-                重置
-              </Button>
-            </Space>
-          </Col>
-        </Row>
-      </Form>
+      <div className="grid grid-cols-4 items-center gap-5">
+        {searchItems.map((item: any) => (
+          <div key={item.name} className="flex items-center gap-2">
+            <Label className="shrink-0 text-sm font-normal text-muted-foreground">
+              {item.label}
+            </Label>
+            <Input disabled data-component-id={item.id} />
+          </div>
+        ))}
+        <div className="flex items-center gap-2">
+          <Button>搜索</Button>
+          <Button variant="outline">重置</Button>
+        </div>
+      </div>
     </div>
   );
 }
 
-export default SearchForm;
+export default SearchFormDev;

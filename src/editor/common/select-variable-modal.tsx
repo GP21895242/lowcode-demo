@@ -1,4 +1,12 @@
-import { Modal, Table } from "antd";
+﻿import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../components/ui/table";
 import { useVariablesStore } from "../stores/variable";
 
 interface Props {
@@ -27,21 +35,56 @@ const SelectVariableModal: React.FC<Props> = ({ open, onCancel, onSelect }) => {
 
   function rowSelect(record: any) {
     onSelect(record);
+    onCancel();
   }
 
   return (
-    <Modal open={open} onCancel={onCancel} title="选择变量" width={800}>
-      <Table
-        onRow={(record) => ({
-          onClick: () => {
-            rowSelect(record);
-          },
-        })}
-        columns={columns}
-        rowKey={(record) => record.name}
-        dataSource={variables}
-      />
-    </Modal>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) onCancel();
+      }}
+    >
+      <DialogContent className="sm:max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>选择变量</DialogTitle>
+        </DialogHeader>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {columns.map((column) => (
+                <TableHead key={column.dataIndex}>{column.title}</TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {variables.length ? (
+              variables.map((record) => (
+                <TableRow
+                  key={record.name}
+                  className="cursor-pointer"
+                  onClick={() => {
+                    rowSelect(record);
+                  }}
+                >
+                  {columns.map((column) => (
+                    <TableCell key={column.dataIndex}>
+                      {(record as any)[column.dataIndex]}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="text-center text-muted-foreground">
+                  暂无变量
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </DialogContent>
+    </Dialog>
   );
 };
 

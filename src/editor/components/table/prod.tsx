@@ -1,89 +1,150 @@
-import { Table as AntdTable, Divider, Space } from "antd";
-import dayjs from "dayjs";
-import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from "react";
+﻿import axios from "axios";
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useState,
+} from "react";
 
-import axios from "axios";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../../components/ui/table";
+import { formatDate } from "../../../lib/utils";
 import type { CommonComponentProps } from "../../interface";
 
-function Table({ url, children, _execEventFlow }: CommonComponentProps, ref: any) {
+interface TableColumnConfig {
+  title: any;
+  dataIndex: string;
+  type?: string;
+  options?: any[];
+}
+
+function TableProd({ url, children, _execEventFlow }: CommonComponentProps, ref: any) {
   const [data, setData] = useState<any[]>([]);
   const [searchParams, setSearchParams] = useState({});
-
   const [loading, setLoading] = useState(false);
 
-  const getData = async (params?: any) => {
-    if (url) {
+  const getData = useCallback(
+    async (params?: any) => {
+      if (!url) return;
+
       setLoading(true);
-      const { data } = await axios.get(url, { params });
-      setData(data);
-      setLoading(false);
-    }
-  };
+
+      try {
+        const response = await axios.get(url, { params });
+        setData(response.data);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [url],
+  );
 
   useEffect(() => {
     void getData(searchParams);
-  }, [searchParams, getData]);
+  }, [getData, searchParams]);
 
-  useImperativeHandle(ref, () => {
-    return {
+  useImperativeHandle(
+    ref,
+    () => ({
       search: setSearchParams,
       reload: () => {
         void getData(searchParams);
       },
-    };
-  }, [searchParams, getData]);
+    }),
+    [getData, searchParams],
+  );
 
-  const columns: any = useMemo(() => {
-    return React.Children.map(children, (item: any) => {
-      if (item?.props?.type === "date") {
+  const columns = useMemo<TableColumnConfig[]>(() => {
+    return (
+      React.Children.map(children, (item: any) => {
         return {
           title: item.props?.title,
           dataIndex: item.props?.dataIndex,
-          render: (value: any) => (value ? dayjs(value).format("YYYY-MM-DD") : null),
+          type: item.props?.type,
+          options: item.props?.options,
         };
-      } else if (item?.props?.type === "option") {
-        return {
-          title: item.props?.title,
-          dataIndex: item.props?.dataIndex,
-          render: (_: any, record: any) => {
-            return (
-              <Space size={0} split={<Divider type="vertical" />}>
-                {item.props.options?.map((option: any) => {
-                  return (
-                    <a
-                      className="select-none"
-                      onClick={() => {
-                        _execEventFlow(option?.event?.children, record, record);
-                      }}
-                      key={option.label}
-                    >
-                      {option.label}
-                    </a>
-                  );
-                })}
-              </Space>
-            );
-          },
-        };
-      }
+      }) || []
+    );
+  }, [children]);
 
-      return {
-        title: item.props?.title,
-        dataIndex: item.props?.dataIndex,
-      };
-    });
-  }, [children, _execEventFlow]);
+  function renderCell(row: any, column: TableColumnConfig) {
+    const value = row?.[column.dataIndex];
+
+    if (column.type === "date") {
+      return formatDate(value) ?? "";
+    }
+
+    if (column.type === "option") {
+      return (
+        <div className="flex items-center gap-2 text-primary">
+          {(column.options || []).map((option: any, index: number) => (
+            <span key={option.key ?? option.label} className="flex items-center gap-2">
+              {index > 0 ? <span className="h-3 w-px bg-border" /> : null}
+              <a
+                className="cursor-pointer select-none hover:underline"
+                onClick={() => {
+                  _execEventFlow?.(option?.event?.children, row, row);
+                }}
+              >
+                {option.label}
+              </a>
+            </span>
+          ))}
+        </div>
+      );
+    }
+
+    return value;
+  }
 
   return (
-    <AntdTable
-      columns={columns}
-      dataSource={data}
-      pagination={false}
-      rowKey="id"
-      loading={loading}
-    />
+    <Table>
+      <TableHeader>
+        <TableRow>
+          {columns.map((column) => (
+            <TableHead key={column.dataIndex}>{column.title}</TableHead>
+          ))}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {loading ? (
+          <TableRow>
+            <TableCell
+              colSpan={Math.max(columns.length, 1)}
+              className="py-6 text-center text-muted-foreground"
+            >
+              加载中...
+            </TableCell>
+          </TableRow>
+        ) : data.length ? (
+          data.map((row, rowIndex) => (
+            <TableRow key={row.id ?? rowIndex}>
+              {columns.map((column) => (
+                <TableCell key={column.dataIndex}>{renderCell(row, column)}</TableCell>
+              ))}
+            </TableRow>
+          ))
+        ) : (
+          <TableRow>
+            <TableCell
+              colSpan={Math.max(columns.length, 1)}
+              className="py-6 text-center text-muted-foreground"
+            >
+              暂无数据
+            </TableCell>
+          </TableRow>
+        )}
+      </TableBody>
+    </Table>
   );
 }
 
-// @ts-expect-error forwardRef type mismatch
-export default forwardRef(Table);
+export default forwardRef(TableProd as any);

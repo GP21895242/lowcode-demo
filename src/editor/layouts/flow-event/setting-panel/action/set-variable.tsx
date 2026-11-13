@@ -1,21 +1,44 @@
-import { Form, Input, Select } from "antd";
+﻿import { Field, useFieldValue } from "../../../../../components/form";
+import { Input } from "../../../../../components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../../../../components/ui/select";
 import { useVariablesStore } from "../../../../stores/variable";
 
-const SetVariableSetting = ({ values }: { values: any }) => {
+const SetVariableSetting = () => {
   const { variables } = useVariablesStore();
+  const variable = useFieldValue("config.variable");
+  const variableOptions = variables.map((item) => ({ label: item.remark, value: item.name }));
 
   return (
     <>
-      <Form.Item label="变量" name={["config", "variable"]}>
-        <Select
-          options={variables.map((variable) => ({ label: variable.remark, value: variable.name }))}
-        />
-      </Form.Item>
-      {values?.config?.variable && (
-        <Form.Item label="值" name={["config", "value"]}>
-          <Input />
-        </Form.Item>
-      )}
+      <Field name="config.variable" label="变量">
+        {({ value, onChange }) => (
+          <Select value={value} onValueChange={onChange} items={variableOptions}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {variableOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </Field>
+      {variable ? (
+        <Field name="config.value" label="值">
+          {({ value, onChange }) => (
+            <Input value={value ?? ""} onChange={(event) => onChange(event.target.value)} />
+          )}
+        </Field>
+      ) : null}
     </>
   );
 };

@@ -9,7 +9,7 @@ const EditStage = (_: any, ref: any) => {
   const { components, curComponentId, setCurComponentId } = useComponetsStore();
   const { componentConfig } = useComponentConfigStore();
 
-  const [hoverComponentId, setHoverComponentId] = useState();
+  const [hoverComponentId, setHoverComponentId] = useState<number>();
 
   const selectedMaskRef = useRef<any>(null);
 
@@ -150,7 +150,7 @@ const EditStage = (_: any, ref: any) => {
           ref={selectedMaskRef}
         />
       )}
-      {hoverComponentId && (
+      {false && hoverComponentId && (
         <HoverMask
           containerClassName="select-mask-container"
           offsetContainerClassName="stage"

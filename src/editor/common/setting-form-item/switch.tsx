@@ -1,6 +1,8 @@
-import { SettingOutlined } from "@ant-design/icons";
-import { Switch } from "antd";
+import { Settings } from "lucide-react";
 import { useState } from "react";
+
+import { Switch } from "../../../components/ui/switch";
+import { cn } from "../../../lib/utils";
 import SelectVariableModal from "../select-variable-modal";
 
 interface Value {
@@ -16,13 +18,6 @@ interface Props {
 const SettingFormItemSwitch: React.FC<Props> = ({ value, onChange }) => {
   const [visible, setVisible] = useState(false);
 
-  function valueChange(checked: any) {
-    onChange?.({
-      type: "static",
-      value: checked,
-    });
-  }
-
   function select(record: any) {
     onChange?.({
       type: "variable",
@@ -32,21 +27,29 @@ const SettingFormItemSwitch: React.FC<Props> = ({ value, onChange }) => {
     setVisible(false);
   }
 
+  const checked = value?.type === "static" || !value ? !!value?.value : false;
+
   return (
-    <div className="flex gap-[8px]">
+    <div className="flex items-center gap-2">
       <Switch
         disabled={value?.type === "variable"}
-        checked={value?.type === "static" || !value ? value?.value : ""}
-        onChange={valueChange}
-        checkedChildren="隐藏"
-        unCheckedChildren="显示"
+        checked={checked}
+        onCheckedChange={(nextChecked) =>
+          onChange?.({
+            type: "static",
+            value: nextChecked,
+          })
+        }
       />
-      <SettingOutlined
+      <span className="text-sm text-muted-foreground">{checked ? "隐藏" : "显示"}</span>
+      <Settings
         onClick={() => {
           setVisible(true);
         }}
-        className="cursor-pointer"
-        style={{ color: value?.type === "variable" ? "blue" : "" }}
+        className={cn(
+          "h-4 w-4 shrink-0 cursor-pointer",
+          value?.type === "variable" ? "text-primary" : "text-muted-foreground",
+        )}
       />
       <SelectVariableModal
         open={visible}

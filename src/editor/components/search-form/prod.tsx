@@ -1,64 +1,69 @@
-import { Button, Col, Form, Input, Row, Space } from "antd";
 import React, { useMemo } from "react";
+
+import { AppForm, Field, useAppForm } from "../../../components/form";
+import { Button } from "../../../components/ui/button";
+import { Input } from "../../../components/ui/input";
 import type { CommonComponentProps } from "../../interface";
 
-function SearchForm({ children, onSearch }: CommonComponentProps) {
-  const [form] = Form.useForm();
+function SearchFormProd({ children, onSearch }: CommonComponentProps) {
+  const form = useAppForm<Record<string, any>>(
+    {},
+    {
+      onSubmit: (values) => {
+        onSearch?.(values);
+      },
+    },
+  );
 
   const searchItems = useMemo(() => {
-    return React.Children.map(children, (item: any) => {
-      return {
+    return (
+      React.Children.map(children, (item: any) => ({
         label: item.props?.label,
         name: item.props?.name,
         type: item.props?.type,
         id: item.props?.id,
-      };
-    });
+      })) || []
+    );
   }, [children]);
-
-  const search = (values: any) => {
-    console.log(values);
-
-    onSearch?.(values);
-  };
 
   return (
     <div className="w-[100%]">
-      <Form form={form} onFinish={search}>
-        <Row gutter={20}>
-          {searchItems.map((item: any) => {
-            return (
-              <Col span={6} key={item.name}>
-                <Form.Item data-component-id={item.id} name={item.name} label={item.label}>
-                  <Input />
-                </Form.Item>
-              </Col>
-            );
-          })}
-          <Col span={6}>
-            <Space>
-              <Button
-                onClick={() => {
-                  form.submit();
-                }}
-                type="primary"
-              >
-                搜索
-              </Button>
-              <Button
-                onClick={() => {
-                  form.resetFields();
-                  form.submit();
-                }}
-              >
-                重置
-              </Button>
-            </Space>
-          </Col>
-        </Row>
-      </Form>
+      <AppForm form={form}>
+        <div className="grid grid-cols-4 items-start gap-5">
+          {searchItems.map((item: any) => (
+            <Field key={item.name} name={item.name} label={item.label}>
+              {({ id, value, onChange }) => (
+                <Input
+                  id={id}
+                  data-component-id={item.id}
+                  value={value ?? ""}
+                  onChange={(event) => onChange(event.target.value)}
+                />
+              )}
+            </Field>
+          ))}
+          <div className="flex items-start gap-2">
+            <Button
+              onClick={() => {
+                void form.handleSubmit();
+              }}
+            >
+              搜索
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                form.reset();
+                void form.handleSubmit();
+              }}
+            >
+              重置
+            </Button>
+          </div>
+        </div>
+      </AppForm>
     </div>
   );
 }
 
-export default SearchForm;
+export default SearchFormProd;

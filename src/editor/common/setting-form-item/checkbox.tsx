@@ -1,6 +1,8 @@
-import { SettingOutlined } from "@ant-design/icons";
-import { Checkbox } from "antd";
+import { Settings } from "lucide-react";
 import { useState } from "react";
+
+import { Checkbox } from "../../../components/ui/checkbox";
+import { cn } from "../../../lib/utils";
 import SelectVariableModal from "../select-variable-modal";
 
 interface Value {
@@ -16,13 +18,6 @@ interface Props {
 const SettingFormItemCheckbox: React.FC<Props> = ({ value, onChange }) => {
   const [visible, setVisible] = useState(false);
 
-  function valueChange(e: any) {
-    onChange?.({
-      type: "static",
-      value: e?.target?.checked,
-    });
-  }
-
   function select(record: any) {
     onChange?.({
       type: "variable",
@@ -33,18 +28,25 @@ const SettingFormItemCheckbox: React.FC<Props> = ({ value, onChange }) => {
   }
 
   return (
-    <div className="flex gap-[8px]">
+    <div className="flex items-center gap-2">
       <Checkbox
         disabled={value?.type === "variable"}
-        checked={value?.type === "static" || !value ? value?.value : ""}
-        onChange={valueChange}
+        checked={value?.type === "static" || !value ? !!value?.value : false}
+        onCheckedChange={(checked) =>
+          onChange?.({
+            type: "static",
+            value: checked,
+          })
+        }
       />
-      <SettingOutlined
+      <Settings
         onClick={() => {
           setVisible(true);
         }}
-        className="cursor-pointer"
-        style={{ color: value?.type === "variable" ? "blue" : "" }}
+        className={cn(
+          "h-4 w-4 shrink-0 cursor-pointer",
+          value?.type === "variable" ? "text-primary" : "text-muted-foreground",
+        )}
       />
       <SelectVariableModal
         open={visible}

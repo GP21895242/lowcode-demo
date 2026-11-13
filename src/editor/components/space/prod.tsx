@@ -1,16 +1,22 @@
-import { Space as AntdSpace } from "antd";
 import type { CommonComponentProps } from "../../interface";
 
-function Space({ children, size, direction }: CommonComponentProps) {
+const gapMap: Record<string, string> = {
+  small: "gap-2",
+  middle: "gap-4",
+  large: "gap-6",
+};
+
+function SpaceProd({ children, size, direction }: CommonComponentProps) {
   return (
-    <AntdSpace
-      direction={direction}
-      size={size}
-      style={{ width: direction === "vertical" ? "100%" : "" }}
+    <div
+      className={`flex ${direction === "vertical" ? "flex-col" : "flex-row"} ${
+        gapMap[size] || gapMap.middle
+      }`}
+      style={{ width: direction === "vertical" ? "100%" : undefined }}
     >
       {children}
-    </AntdSpace>
+    </div>
   );
 }
 
-export default Space;
+export default SpaceProd;

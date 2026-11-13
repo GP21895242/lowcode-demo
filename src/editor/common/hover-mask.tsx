@@ -1,6 +1,6 @@
-import { Dropdown, Space } from "antd";
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from "react";
+﻿import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+
 import { useComponentConfigStore } from "../stores/component-config";
 import { useComponetsStore } from "../stores/components";
 import { getComponentById } from "../utils/utils";
@@ -11,7 +11,7 @@ interface Props {
   // 相对容器class
   offsetContainerClassName: string;
   // 组件id
-  componentId: number;
+  componentId?: number;
 }
 
 function HoverMask({ containerClassName, offsetContainerClassName, componentId }: Props, ref: any) {
@@ -24,20 +24,11 @@ function HoverMask({ containerClassName, offsetContainerClassName, componentId }
     toolsLeft: 0,
   });
 
-  const { components, setCurComponentId } = useComponetsStore();
+  const { components } = useComponetsStore();
 
   const { componentConfig } = useComponentConfigStore();
 
-  // 对外暴露更新位置方法
-  useImperativeHandle(ref, () => ({
-    updatePosition: () => updatePosition(),
-  }));
-
-  useEffect(() => {
-    updatePosition();
-  }, [componentId, updatePosition]);
-
-  function updatePosition() {
+  const updatePosition = useCallback(() => {
     if (!componentId) return;
 
     const container = document.querySelector(`.${offsetContainerClassName}`);
@@ -62,29 +53,26 @@ function HoverMask({ containerClassName, offsetContainerClassName, componentId }
 
     setPosition({
       top: top - containerTop + container.scrollTop,
-      left: left - containerLeft + container.scrollTop,
+      left: left - containerLeft + container.scrollLeft,
       width,
       height,
       toolsTop,
       toolsLeft,
     });
-  }
+  }, [componentId, offsetContainerClassName]);
+
+  // 对外暴露更新位置方法
+  useImperativeHandle(ref, () => ({
+    updatePosition: () => updatePosition(),
+  }));
+
+  useEffect(() => {
+    updatePosition();
+  }, [updatePosition]);
 
   const curComponent = useMemo(() => {
-    return getComponentById(componentId, components);
+    return getComponentById(componentId ?? null, components);
   }, [componentId, components]);
-
-  const parentComponents = useMemo(() => {
-    const parentComponents = [];
-    let component = getComponentById(componentId, components);
-
-    while (component?.parentId) {
-      component = getComponentById(component.parentId, components);
-      parentComponents.push(component);
-    }
-
-    return parentComponents;
-  }, [curComponent, components, componentId]);
 
   return createPortal(
     <>
@@ -113,37 +101,22 @@ function HoverMask({ containerClassName, offsetContainerClassName, componentId }
           zIndex: 13,
           display: !position.width || position.width < 10 ? "none" : "inline",
           transform: "translate(-100%, -100%)",
+          pointerEvents: "auto",
         }}
       >
-        <Space>
-          <Dropdown
-            menu={{
-              items: parentComponents.map((item) => ({
-                key: item?.id || "",
-                label: item?.name,
-              })),
-              onClick: ({ key }) => {
-                setCurComponentId(Number(key));
-              },
-            }}
-            placement="bottomRight"
-            disabled={parentComponents.length === 0}
-            getPopupContainer={(node) => node.parentElement!}
-          >
-            <div
-              style={{
-                padding: "0 8px",
-                backgroundColor: "#1890ff",
-                borderRadius: 4,
-                color: "#fff",
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {componentConfig[curComponent?.name || ""]?.desc}
-            </div>
-          </Dropdown>
-        </Space>
+        <span>TMP</span>
+        <div
+          style={{
+            padding: "0 8px",
+            backgroundColor: "#1890ff",
+            borderRadius: 4,
+            color: "#fff",
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {componentConfig[curComponent?.name || ""]?.desc}
+        </div>
       </div>
     </>,
     document.querySelector(`.${containerClassName}`)!,

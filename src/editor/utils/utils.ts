@@ -1,6 +1,7 @@
 import React from "react";
 import { useComponentConfigStore } from "../stores/component-config";
 import type { Component } from "../stores/components";
+import type { Variable } from "../stores/variable";
 
 /**
  * 根据 id 递归查找组件
@@ -50,6 +51,18 @@ export async function loadRemoteComponent(url: string) {
 
   return { default: module.exports } as any;
 }
+
+/**
+ * 将变量默认值组装成页面数据，用于初始化或重置运行时数据
+ * @param variables 变量列表
+ * @returns
+ */
+export const getVariablesDefaultData = (variables: Variable[]) => {
+  return variables.reduce<Record<string, any>>((prev, variable) => {
+    prev[variable.name] = variable.defaultValue;
+    return prev;
+  }, {});
+};
 
 /**
  * 获取组件允许拖入的组件

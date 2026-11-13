@@ -1,10 +1,10 @@
-import { DeleteOutlined } from "@ant-design/icons";
-import { Dropdown, Popconfirm, Space } from "antd";
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from "react";
+﻿import { Trash2 } from "lucide-react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from "react";
 import { createPortal } from "react-dom";
+
+import { openConfirm } from "./confirm-dialog";
 import { useComponentConfigStore } from "../stores/component-config";
 import { useComponetsStore } from "../stores/components";
-import { getComponentById } from "../utils/utils";
 
 interface Props {
   // 容器class
@@ -23,21 +23,11 @@ function SelectedMask({ containerClassName, offsetContainerClassName }: Props, r
     toolsLeft: 0,
   });
 
-  const { curComponent, curComponentId, components, setCurComponentId, deleteComponent } =
-    useComponetsStore();
+  const { curComponent, curComponentId, setCurComponentId, deleteComponent } = useComponetsStore();
 
   const { componentConfig } = useComponentConfigStore();
 
-  // 对外暴露更新位置方法
-  useImperativeHandle(ref, () => ({
-    updatePosition: () => updatePosition(),
-  }));
-
-  useEffect(() => {
-    updatePosition();
-  }, [curComponentId, updatePosition]);
-
-  function updatePosition() {
+  const updatePosition = useCallback(() => {
     if (!curComponentId) return;
 
     const container = document.querySelector(`.${offsetContainerClassName}`);
@@ -62,30 +52,36 @@ function SelectedMask({ containerClassName, offsetContainerClassName }: Props, r
 
     setPosition({
       top: top - containerTop + container.scrollTop,
-      left: left - containerLeft + container.scrollTop,
+      left: left - containerLeft + container.scrollLeft,
       width,
       height,
       toolsTop,
       toolsLeft,
     });
-  }
+  }, [curComponentId, offsetContainerClassName]);
 
-  // 获取当前组件的父组件
-  const parentComponents = useMemo(() => {
-    const parentComponents = [];
-    let component = curComponent;
+  // 对外暴露更新位置方法
+  useImperativeHandle(ref, () => ({
+    updatePosition: () => updatePosition(),
+  }));
 
-    while (component?.parentId) {
-      component = getComponentById(component.parentId, components);
-      parentComponents.push(component);
-    }
-
-    return parentComponents;
-  }, [curComponent, components]);
+  useEffect(() => {
+    updatePosition();
+  }, [updatePosition]);
 
   function deleteHandle() {
     deleteComponent(curComponentId);
     setCurComponentId(null);
+  }
+
+  function openDeleteConfirm() {
+    openConfirm({
+      title: "提示",
+      content: "确认删除？",
+      okText: "确认",
+      cancelText: "取消",
+      onOk: deleteHandle,
+    });
   }
 
   return createPortal(
@@ -115,61 +111,35 @@ function SelectedMask({ containerClassName, offsetContainerClassName }: Props, r
           zIndex: 11,
           display: !position.width || position.width < 10 ? "none" : "inline",
           transform: "translate(-100%, -100%)",
+          pointerEvents: "auto",
         }}
       >
-        <Space>
-          <Dropdown
-            menu={{
-              items: parentComponents.map((item) => ({
-                key: item?.id || "",
-                label: item?.desc || item?.name,
-              })),
-              onClick: ({ key }) => {
-                setCurComponentId(Number(key));
-              },
+        <div className="flex items-center gap-2">
+          <div
+            style={{
+              padding: "0 8px",
+              backgroundColor: "#1890ff",
+              borderRadius: 4,
+              color: "#fff",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
             }}
-            placement="bottomRight"
-            disabled={parentComponents.length === 0}
           >
-            <div
-              style={{
-                padding: "0 8px",
-                backgroundColor: "#1890ff",
-                borderRadius: 4,
-                color: "#fff",
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {componentConfig[curComponent?.name || ""]?.desc}
-            </div>
-          </Dropdown>
+            {componentConfig[curComponent?.name || ""]?.desc}
+          </div>
           {+(curComponentId || 0) !== 1 && (
-            <div style={{ padding: "0 8px", backgroundColor: "#1890ff" }}>
-              <Popconfirm
-                title="确认删除？"
-                overlayClassName="min-w-130px"
-                okText={
-                  <div className="delete-confirm-btn" style={{ padding: "0 7px" }}>
-                    确认
-                  </div>
-                }
-                cancelText={
-                  <div className="delete-confirm-btn" style={{ padding: "0 7px" }}>
-                    取消
-                  </div>
-                }
-                onConfirm={deleteHandle}
-                // getPopupContainer={n => n.parentNode}
-                placement="bottomRight"
-                okButtonProps={{ style: { padding: 0 } }}
-                cancelButtonProps={{ style: { padding: 0 } }}
-              >
-                <DeleteOutlined style={{ color: "#fff" }} />
-              </Popconfirm>
+            <div
+              style={{ padding: "0 8px", backgroundColor: "#1890ff", borderRadius: 4 }}
+              className="flex items-center"
+            >
+              <Trash2
+                style={{ color: "#fff" }}
+                className="h-4 w-4 cursor-pointer"
+                onClick={openDeleteConfirm}
+              />
             </div>
           )}
-        </Space>
+        </div>
       </div>
     </>,
     document.querySelector(`.${containerClassName}`)!,

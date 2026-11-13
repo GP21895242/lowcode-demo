@@ -1,29 +1,40 @@
-import { Form, Select } from "antd";
+﻿import { Field } from "../../components/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
 import type { ComponentSetter } from "../interface";
 import SettingFormItemInput from "./setting-form-item/input";
 
 function CommonSetter({ setters }: { setters: ComponentSetter[] }) {
-  /**
-   * 动态渲染表单元素
-   * @param setting 元素配置
-   * @returns
-   */
-  function renderFormElememt(setting: any) {
-    const { type, options } = setting;
-
-    if (type === "select") {
-      return <Select options={options} />;
-    } else if (type === "input") {
-      return <SettingFormItemInput />;
-    }
-  }
-
   return (
     <>
       {(setters || []).map((setter) => (
-        <Form.Item key={setter.name} name={setter.name} label={setter.label}>
-          {renderFormElememt(setter)}
-        </Form.Item>
+        <Field key={setter.name} name={setter.name} label={setter.label}>
+          {({ value, onChange }) => {
+            if (setter.type === "select") {
+              return (
+                <Select value={value} onValueChange={onChange} items={setter.options}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {setter.options.map((option: { label: string; value: string }) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              );
+            }
+
+            return <SettingFormItemInput value={value} onChange={onChange} />;
+          }}
+        </Field>
       ))}
     </>
   );

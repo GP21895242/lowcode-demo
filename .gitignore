@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# AI tooling config
+.claude/
+.codex/
+.gemini/
+.trae-html-share-packages/

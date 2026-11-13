@@ -1,7 +1,17 @@
-import { EditOutlined, PlusOutlined } from "@ant-design/icons";
-import { Button, Drawer, Form, Input, Space, Tooltip } from "antd";
+import { Settings } from "lucide-react";
 import { useRef, useState } from "react";
-import { arrayMove } from "react-sortable-hoc";
+
+import { Field, useFieldValue } from "../../../components/form";
+import { Button } from "../../../components/ui/button";
+import { Input } from "../../../components/ui/input";
+import {
+  Sheet,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "../../../components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../../../components/ui/tooltip";
 import CommonSetter from "../../common/common-setter";
 import SortableList from "../../common/sortable-list";
 import FlowEvent from "../../layouts/flow-event";
@@ -12,18 +22,9 @@ const setter = [
     label: "类型",
     type: "select",
     options: [
-      {
-        label: "文本",
-        value: "text",
-      },
-      {
-        label: "日期",
-        value: "date",
-      },
-      {
-        label: "操作",
-        value: "option",
-      },
+      { label: "文本", value: "text" },
+      { label: "日期", value: "date" },
+      { label: "操作", value: "option" },
     ],
   },
   {
@@ -38,121 +39,126 @@ const setter = [
   },
 ];
 
-function OptionsFormItem({ value = [], onChange }: any) {
+function OptionsFormItem({ value, onChange }: any) {
+  const items: any[] = Array.isArray(value) ? value : [];
+
   const [open, setOpen] = useState(false);
-  const [curItem, setCurItem] = useState<any>({});
+  const [curKey, setCurKey] = useState<any>(null);
   const flowEventRef = useRef<any>(null);
 
-  function changeHandle(val: string, item: any) {
-    item.label = val;
-    onChange([...value]);
+  const curItem = items.find((item) => item.key === curKey);
+
+  function changeHandle(label: string, index: number) {
+    onChange(items.map((item, itemIndex) => (itemIndex === index ? { ...item, label } : item)));
   }
 
-  function sortEndHanlde({ oldIndex, newIndex }: { oldIndex: number; newIndex: number }) {
-    onChange(arrayMove(value, oldIndex, newIndex));
+  function deleteHandle(index: number) {
+    onChange(items.filter((_, itemIndex) => itemIndex !== index));
+  }
+
+  function sortEndHandle({ oldIndex, newIndex }: { oldIndex: number; newIndex: number }) {
+    if (oldIndex === newIndex) return;
+
+    const next = [...items];
+    const [moved] = next.splice(oldIndex, 1);
+    next.splice(newIndex, 0, moved);
+    onChange(next);
   }
 
   function save() {
-    const val = flowEventRef.current?.save();
-    setCurItem((prev: any) => ({ ...prev, event: val }));
-    onChange([...value]);
+    const flowEvent = flowEventRef.current?.save();
+
+    onChange(items.map((item) => (item.key === curKey ? { ...item, event: flowEvent } : item)));
     setOpen(false);
-    setCurItem({});
   }
 
   return (
     <div>
-      <div className="h-[32px] flex items-center bg-[#f7f8fa] px-[16px] rounded-2px font-semibold">
-        操作
-      </div>
-      <div className="w-[100%] p-[20px]">
+      <div className="mb-2 rounded-sm bg-muted px-4 py-2 text-sm font-semibold">操作</div>
+
+      <div className="p-2">
         <SortableList
-          items={value || []}
+          items={items}
           hiddenEdit
-          onDelete={(item: any) => {
-            const index = value.findIndex((v: any) => v.dataIndex === item.dataIndex);
-            value.splice(index, 1);
-            onChange([...value]);
-          }}
-          itemRender={(item: any) => (
-            <Space>
-              <div
-                className="w-[140px] text-[14px] text-[rgb(0,0,0)]"
-                style={{
-                  fontFamily:
-                    "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans',sans-serif,'Apple Color Emoji','Segoe UI Emoji','Segoe UI Symbol','Noto Color Emoji'",
-                }}
-              >
-                <Input
-                  onChange={(e) => {
-                    changeHandle(e.target.value, item);
-                  }}
-                  value={item.label}
+          onDelete={(_: any, index: number) => deleteHandle(index)}
+          itemRender={(item: any, index: number) => (
+            <div className="flex flex-1 items-center gap-2">
+              <Input
+                className="w-[140px]"
+                value={item.label ?? ""}
+                onChange={(event) => changeHandle(event.target.value, index)}
+              />
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <button
+                      type="button"
+                      className="inline-flex text-muted-foreground hover:text-primary"
+                      onClick={() => {
+                        setCurKey(item.key);
+                        setOpen(true);
+                      }}
+                      aria-label="设置点击事件"
+                    >
+                      <Settings className="h-4 w-4" />
+                    </button>
+                  }
                 />
-              </div>
-              <Tooltip title="设置点击事件">
-                <EditOutlined
-                  onClick={() => {
-                    setCurItem(item);
-                    setOpen(true);
-                  }}
-                  className="cursor-pointer"
-                />
+                <TooltipContent>设置点击事件</TooltipContent>
               </Tooltip>
-            </Space>
+            </div>
           )}
-          useDragHandle
-          onSortEnd={sortEndHanlde}
+          onSortEnd={sortEndHandle}
         />
       </div>
-      <div className="px-[20px]">
-        <Button
-          icon={<PlusOutlined />}
-          block
-          type="dashed"
-          onClick={() => {
-            onChange([...value, { key: new Date().getTime(), label: "" }]);
-          }}
-        >
-          添加
-        </Button>
-      </div>
-      <Drawer
-        title="设置事件流"
-        width="100vw"
-        open={open}
-        zIndex={1005}
-        onClose={() => {
-          setOpen(false);
+
+      <Button
+        variant="outline"
+        className="w-full border-dashed"
+        onClick={() => {
+          onChange([...items, { key: new Date().getTime(), label: "" }]);
         }}
-        extra={
-          <Button type="primary" onClick={save}>
-            保存
-          </Button>
-        }
-        push={false}
-        destroyOnClose
-        styles={{ body: { padding: 0 } }}
       >
-        <FlowEvent flowData={curItem?.event} ref={flowEventRef} />
-      </Drawer>
+        添加
+      </Button>
+
+      <Sheet
+        open={open}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setOpen(false);
+        }}
+      >
+        <SheetContent
+          side="right"
+          className="gap-0 p-0"
+          style={{ width: "100vw", maxWidth: "100vw", zIndex: 1005 }}
+        >
+          <SheetHeader>
+            <SheetTitle>设置事件流</SheetTitle>
+          </SheetHeader>
+          <div className="min-h-0 flex-1 overflow-auto">
+            <FlowEvent flowData={curItem?.event} ref={flowEventRef} />
+          </div>
+          <SheetFooter>
+            <Button onClick={save}>保存</Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
 
 function Setter() {
-  const form = Form.useFormInstance();
-
-  const type = Form.useWatch("type", form);
+  const type = useFieldValue("type");
 
   return (
     <>
       <CommonSetter setters={setter} />
-      {type === "option" && (
-        <Form.Item noStyle name="options">
-          <OptionsFormItem />
-        </Form.Item>
-      )}
+      {type === "option" ? (
+        <Field name="options">
+          {({ value, onChange }) => <OptionsFormItem value={value} onChange={onChange} />}
+        </Field>
+      ) : null}
     </>
   );
 }

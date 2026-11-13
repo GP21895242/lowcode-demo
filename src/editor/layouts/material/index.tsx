@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+
 import ComponentItem from "../../common/component-item";
 import type { ComponentConfig } from "../../interface";
 import { useComponentConfigStore } from "../../stores/component-config";
@@ -42,10 +43,13 @@ const Material = ({ onDragging }: { onDragging?: () => void }) => {
   }, [componentConfig]);
 
   return (
-    <div className="flex p-[10px] gap-4 flex-wrap">
-      {components.map((item) => (
-        <ComponentItem onDragging={onDragging} key={item.name} onDragEnd={onDragEnd} {...item} />
-      ))}
+    <div className="p-2">
+      <div className="px-1 pb-1 text-[11px] font-medium text-muted-foreground">基础</div>
+      <div className="grid grid-cols-2 gap-1">
+        {components.map((item) => (
+          <ComponentItem onDragging={onDragging} key={item.name} onDragEnd={onDragEnd} {...item} />
+        ))}
+      </div>
     </div>
   );
 };

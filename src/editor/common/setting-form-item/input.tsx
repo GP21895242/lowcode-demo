@@ -1,6 +1,8 @@
-import { SettingOutlined } from "@ant-design/icons";
-import { Input } from "antd";
+import { Settings } from "lucide-react";
 import { useState } from "react";
+
+import { Input } from "../../../components/ui/input";
+import { cn } from "../../../lib/utils";
 import SelectVariableModal from "../select-variable-modal";
 
 interface Value {
@@ -16,13 +18,6 @@ interface Props {
 const SettingFormItemInput: React.FC<Props> = ({ value, onChange }) => {
   const [visible, setVisible] = useState(false);
 
-  function valueChange(e: any) {
-    onChange?.({
-      type: "static",
-      value: e?.target?.value,
-    });
-  }
-
   function select(record: any) {
     onChange?.({
       type: "variable",
@@ -33,18 +28,25 @@ const SettingFormItemInput: React.FC<Props> = ({ value, onChange }) => {
   }
 
   return (
-    <div className="flex gap-[8px]">
+    <div className="flex items-center gap-2">
       <Input
         disabled={value?.type === "variable"}
-        value={value?.type === "static" || !value ? value?.value : ""}
-        onChange={valueChange}
+        value={value?.type === "static" || !value ? (value?.value ?? "") : ""}
+        onChange={(event) =>
+          onChange?.({
+            type: "static",
+            value: event.target.value,
+          })
+        }
       />
-      <SettingOutlined
+      <Settings
         onClick={() => {
           setVisible(true);
         }}
-        className="cursor-pointer"
-        style={{ color: value?.type === "variable" ? "blue" : "" }}
+        className={cn(
+          "h-4 w-4 shrink-0 cursor-pointer",
+          value?.type === "variable" ? "text-primary" : "text-muted-foreground",
+        )}
       />
       <SelectVariableModal
         open={visible}

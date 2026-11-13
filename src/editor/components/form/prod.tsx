@@ -1,89 +1,95 @@
-import { Form as AntdForm, DatePicker, Input } from "antd";
-import React, { forwardRef, useEffect, useImperativeHandle, useMemo } from "react";
+﻿import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from "react";
+
+import { AppForm, Field, useAppForm } from "../../../components/form";
+import { Input } from "../../../components/ui/input";
+import { toast } from "../../../components/ui/toast";
+import { formatDate } from "../../../lib/utils";
 import type { CommonComponentProps } from "../../interface";
-import dayjs from "dayjs";
 
-function Form({ children, defaultValue, onFinish }: CommonComponentProps, ref: any) {
-  const [form] = AntdForm.useForm();
+function FormProd({ children, defaultValue, onFinish }: CommonComponentProps, ref: any) {
+  const submitRef = useRef<(values: Record<string, any>) => void>(() => {});
 
-  useImperativeHandle(ref, () => {
-    return {
-      submit: () => {
-        form.submit();
+  const form = useAppForm<Record<string, any>>(
+    {},
+    {
+      onSubmit: (values) => {
+        submitRef.current(values);
       },
-    };
-  }, [form]);
+    },
+  );
 
-  useEffect(() => {
-    if (defaultValue) {
-      const data: any = {};
-      React.Children.toArray(children).forEach((item: any) => {
-        if (item.props.type === "date") {
-          data[item.props.name] = dayjs(defaultValue[item.props.name]);
-        } else {
-          data[item.props.name] = defaultValue[item.props.name];
-        }
-      });
-
-      form.setFieldsValue(data);
-    }
-  }, [defaultValue, form, children]);
-
-  const searchItems = useMemo(() => {
-    return React.Children.map(children, (item: any) => {
-      return {
+  const formItems = useMemo(() => {
+    return (
+      React.Children.map(children, (item: any) => ({
         label: item.props?.label,
         name: item.props?.name,
         type: item.props?.type,
         id: item.props?.id,
         rules: item.props?.rules,
-      };
-    });
+      })) || []
+    );
   }, [children]);
 
-  async function save(values: any) {
-    Object.keys(values).forEach((key) => {
-      if (dayjs.isDayjs(values[key])) {
-        values[key] = values[key].format("YYYY-MM-DD");
-      }
+  useImperativeHandle(
+    ref,
+    () => ({
+      submit: () => {
+        void form.handleSubmit();
+      },
+    }),
+    [form],
+  );
+
+  useEffect(() => {
+    if (!defaultValue) return;
+
+    const data: Record<string, any> = {};
+
+    formItems.forEach((item: any) => {
+      data[item.name] =
+        item.type === "date" ? formatDate(defaultValue[item.name]) : defaultValue[item.name];
     });
 
-    onFinish(values);
-  }
+    form.reset(data);
+  }, [defaultValue, form, children]);
+
+  submitRef.current = (values: Record<string, any>) => {
+    const missing = formItems.some(
+      (item: any) =>
+        item.rules === "required" && (values[item.name] === undefined || values[item.name] === ""),
+    );
+
+    if (missing) {
+      toast.add({ title: "不能为空", type: "error" });
+      return;
+    }
+
+    onFinish?.(values);
+  };
 
   return (
-    <AntdForm
-      name="form"
-      labelCol={{ span: 5 }}
-      wrapperCol={{ span: 18 }}
-      form={form}
-      onFinish={save}
-    >
-      {searchItems.map((item: any) => {
-        return (
-          <AntdForm.Item
+    <AppForm form={form} className="py-2">
+      <div className="flex flex-col gap-4">
+        {formItems.map((item: any) => (
+          <Field
             key={item.name}
             name={item.name}
             label={item.label}
-            rules={
-              item.rules === "required"
-                ? [
-                    {
-                      required: true,
-                      message: "不能为空",
-                    },
-                  ]
-                : []
-            }
+            required={item.rules === "required"}
           >
-            {item.type === "input" && <Input />}
-            {item.type === "date" && <DatePicker />}
-          </AntdForm.Item>
-        );
-      })}
-    </AntdForm>
+            {({ id, value, onChange }) => (
+              <Input
+                id={id}
+                type={item.type === "date" ? "date" : "text"}
+                value={value ?? ""}
+                onChange={(event) => onChange(event.target.value)}
+              />
+            )}
+          </Field>
+        ))}
+      </div>
+    </AppForm>
   );
 }
 
-// @ts-expect-error forwardRef type mismatch
-export default forwardRef(Form);
+export default forwardRef(FormProd as any);

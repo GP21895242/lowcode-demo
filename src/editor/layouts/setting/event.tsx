@@ -1,8 +1,21 @@
-import { Button, Collapse, Drawer, Space } from "antd";
 import { useRef, useState } from "react";
-import { useComponetsStore } from "../../stores/components";
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "../../../components/ui/accordion";
+import { Button } from "../../../components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "../../../components/ui/sheet";
 import { useComponentConfigStore } from "../../stores/component-config";
+import { useComponetsStore } from "../../stores/components";
 import FlowEvent from "../flow-event";
 
 const ComponentEvent = () => {
@@ -18,7 +31,6 @@ const ComponentEvent = () => {
     if (!curComponentId) return;
 
     const value = flowEventRef.current?.save();
-    console.log(value);
 
     updateComponentProps(curComponentId, {
       [eventName]: value,
@@ -29,55 +41,61 @@ const ComponentEvent = () => {
 
   if (!curComponent) return null;
 
+  const events = componentConfig[curComponent.name]?.events || [];
+
   return (
-    <div className="px-[12px]">
-      {(componentConfig[curComponent.name]?.events || []).map((event: any) => {
-        return (
-          <Collapse key={event.name} defaultActiveKey={event.name}>
-            <Collapse.Panel header={event.desc} key={event.name}>
+    <div className="pt-2">
+      <Accordion multiple defaultValue={events.map((event: any) => event.name)}>
+        {events.map((event: any) => (
+          <AccordionItem key={event.name} value={event.name}>
+            <AccordionTrigger>{event.desc}</AccordionTrigger>
+            <AccordionContent>
               <div className="text-center">
                 <Button
                   onClick={() => {
                     setEventName(event.name);
                     setOpen(true);
                   }}
-                  type="primary"
                 >
                   设置事件流
                 </Button>
               </div>
-            </Collapse.Panel>
-          </Collapse>
-        );
-      })}
-      <Drawer
-        title="设置事件流"
-        width="100vw"
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+      <Sheet
         open={open}
-        zIndex={1005}
-        onClose={() => {
-          setOpen(false);
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setOpen(false);
         }}
-        extra={
-          <Space>
-            <Button type="primary" onClick={save}>
-              保存
-            </Button>
-            <Button
-              onClick={() => {
-                setOpen(false);
-              }}
-            >
-              取消
-            </Button>
-          </Space>
-        }
-        push={false}
-        destroyOnClose
-        styles={{ body: { padding: 0 } }}
       >
-        <FlowEvent flowData={curComponent?.props?.[eventName]} ref={flowEventRef} />
-      </Drawer>
+        <SheetContent
+          side="right"
+          className="gap-0 p-0"
+          style={{ width: "100vw", maxWidth: "100vw" }}
+        >
+          <SheetHeader>
+            <SheetTitle>设置事件流</SheetTitle>
+          </SheetHeader>
+          <div className="min-h-0 flex-1 overflow-auto">
+            <FlowEvent flowData={curComponent?.props?.[eventName]} ref={flowEventRef} />
+          </div>
+          <SheetFooter>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setOpen(false);
+                }}
+              >
+                取消
+              </Button>
+              <Button onClick={save}>保存</Button>
+            </div>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 };

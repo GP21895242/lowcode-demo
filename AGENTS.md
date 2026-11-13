@@ -22,6 +22,10 @@ Docs are local at `node_modules/vite-plus/docs` or online at https://viteplus.de
 
 `vp <name>` runs a built-in command. `vp run <name>` runs a `package.json` script or a `vite.config.ts` task. Scripts cannot overwrite built-ins, so `vp dev` and `vp run dev` may do different things. Check `package.json` and `vite.config.ts` first, and run `vp run <name>` when the project defines a script or task with that name.
 
+## Running Scripts
+
+Run TypeScript and JavaScript files with `vpx <file>`, for example `vpx ./scripts/seed.ts --dry-run`. It handles enums, decorators, JSX, and tsconfig `paths`, so do not add `tsx` or `ts-node` to run scripts. `vpx --watch <file>` reruns the file when a file it uses changes, in place of `tsx watch`. `vp node <file>` runs plain Node.js.
+
 ## Tool Versions
 
 Run `vp toolchain` to show versions and relationships in the active Vite+
@@ -37,3 +41,14 @@ release. Add a tool name to select part of the graph. For example, run
 - [ ] If setup, runtime, or package-manager behavior looks wrong, run `vp env doctor` and include its output when asking for help.
 
 <!--VITE PLUS END-->
+
+## UI 组件规范（shadcn + Base UI）
+
+- 新增 UI 组件统一使用 shadcn CLI 添加（`npx shadcn@latest add <component>`）。当前 `components.json` 的 `style` 为 `base-vega`，底层交互库为 `@base-ui/react`；禁止引入 `@radix-ui/*` 系列依赖。
+- 设计令牌与主题统一维护在 `src/index.css`（`@theme inline` + CSS 变量），类名合并统一使用 `src/lib/utils.ts` 导出的 `cn`。
+- `src/components/ui/` 下由 shadcn 生成的组件与目录属于生成产物：没有用户的明确指令，不得修改、删除、重命名或重写其内容（含格式化、import 路径调整）。
+- 若确实需要调整生成组件，须先向用户说明原因并取得明确同意；能通过主题变量、`components.json` 或调用方 `className` 解决时，优先在生成文件之外处理。
+
+## Others
+
+Please use chinese as default language for communication。

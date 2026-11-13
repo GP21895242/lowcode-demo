@@ -1,8 +1,16 @@
-import { Modal as AntdModal } from "antd";
-import { forwardRef, useImperativeHandle, useState } from "react";
+﻿import { forwardRef, useImperativeHandle, useState } from "react";
+
+import { Button } from "../../../components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../../../components/ui/dialog";
 import type { CommonComponentProps } from "../../interface";
 
-function Modal({ children, title, onOk, onCancel }: CommonComponentProps, ref: any) {
+function ModalProd({ children, title, onOk, onCancel }: CommonComponentProps, ref: any) {
   const [open, setOpen] = useState(false);
 
   const [confirmLoading, setConfirmLoading] = useState(false);
@@ -25,23 +33,42 @@ function Modal({ children, title, onOk, onCancel }: CommonComponentProps, ref: a
   }, []);
 
   return (
-    <AntdModal
-      title={title}
+    <Dialog
       open={open}
-      onCancel={() => {
-        onCancel?.();
-        setOpen(false);
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) {
+          onCancel?.();
+          setOpen(false);
+        }
       }}
-      onOk={() => {
-        onOk?.();
-      }}
-      confirmLoading={confirmLoading}
-      destroyOnClose
     >
-      {children}
-    </AntdModal>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        {children}
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => {
+              onCancel?.();
+              setOpen(false);
+            }}
+          >
+            取消
+          </Button>
+          <Button
+            disabled={confirmLoading}
+            onClick={() => {
+              onOk?.();
+            }}
+          >
+            确定
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
-// @ts-expect-error forwardRef type mismatch
-export default forwardRef(Modal);
+export default forwardRef(ModalProd as any);
