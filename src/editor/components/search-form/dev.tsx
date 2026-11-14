@@ -59,13 +59,13 @@ function SearchFormDev({ _id, _name, children }: CommonComponentProps) {
     >
       <div className="grid grid-cols-4 items-center gap-5">
         {searchItems.map((item: any) => (
-          <div key={item.key} className="flex items-center gap-2">
+          <div key={item.key} className="flex items-center gap-2" data-component-id={item.id}>
             <Label className="shrink-0 text-sm font-normal text-muted-foreground">
               {item.label}
             </Label>
             <Input
+              className="pointer-events-none"
               disabled
-              data-component-id={item.id}
               placeholder={item.sourceId ? "数据源查询" : ""}
             />
           </div>

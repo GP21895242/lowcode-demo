@@ -43,11 +43,11 @@ function FormDev({ _id, _name, children }: CommonComponentProps) {
     >
       <div className="flex flex-col gap-4">
         {formItems.map((item: any) => (
-          <div key={item.name} className="flex items-center gap-3">
+          <div key={item.name} className="flex items-center gap-3" data-component-id={item.id}>
             <Label className="w-[92px] shrink-0 text-right text-sm font-normal text-muted-foreground">
               {item.label}
             </Label>
-            <Input className="flex-1" disabled data-component-id={item.id} />
+            <Input className="pointer-events-none flex-1" disabled />
           </div>
         ))}
       </div>
