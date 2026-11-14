@@ -14,6 +14,6 @@ export default (ctx: Context) => {
     methods: [],
     events: [],
     order: 1.1,
-    allowDrag: [ItemType.Page, ItemType.Space],
+    allowDrag: [ItemType.Page, ItemType.Space, ItemType.Card],
   });
 };

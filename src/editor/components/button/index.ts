@@ -45,6 +45,6 @@ export default (ctx: Context) => {
       },
     ],
     order: 2,
-    allowDrag: [ItemType.Page, ItemType.Space],
+    allowDrag: [ItemType.Page, ItemType.Space, ItemType.Card],
   });
 };

@@ -30,6 +30,6 @@ export default (ctx: Context) => {
       },
     ],
     order: 6,
-    allowDrag: [ItemType.Page, ItemType.Space, ItemType.Modal],
+    allowDrag: [ItemType.Page, ItemType.Space, ItemType.Modal, ItemType.Card],
   });
 };

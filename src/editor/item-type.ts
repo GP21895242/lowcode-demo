@@ -12,4 +12,5 @@ export const ItemType = {
   Chart: "Chart",
   Page: "Page",
   Box: "Box",
+  Card: "Card",
 };

@@ -5,6 +5,7 @@ import {
   LayoutTemplate,
   type LucideIcon,
   MousePointerClick,
+  PanelTop,
   PanelsTopLeft,
   Rows3,
   Search,
@@ -29,6 +30,7 @@ interface ComponentItemProps {
 const iconMap: Record<string, LucideIcon> = {
   Box: Box,
   Button: MousePointerClick,
+  Card: PanelTop,
   Chart: ChartColumn,
   Form: LayoutTemplate,
   FormItem: TextCursorInput,
