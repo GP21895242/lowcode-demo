@@ -1,7 +1,8 @@
-import { MousePointer2 } from "lucide-react";
+import { Redo2, Undo2 } from "lucide-react";
 
 import { useEffect, useRef, useState } from "react";
 
+import { Button } from "../../components/ui/button";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -29,7 +30,7 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ pageId, pageName, view, fromEdit }) => {
-  const { curComponent, curComponentId } = useComponetsStore();
+  const { past, future, undo, redo } = useComponetsStore();
   const { setComponentConfig } = useComponentConfigStore();
   const [loading, setLoading] = useState(true);
   const { mergeData } = usePageDataStore();
@@ -104,22 +105,27 @@ const Layout: React.FC<LayoutProps> = ({ pageId, pageName, view, fromEdit }) => 
           <ResizableHandle />
           <ResizablePanel className="min-w-0">
             <div className="relative flex h-full min-h-0 flex-col overflow-hidden">
-              <div className="flex h-9 shrink-0 items-center justify-between border-b border-border bg-background px-3 text-xs text-muted-foreground">
-                <div className="flex min-w-0 items-center gap-1.5">
-                  <MousePointer2 className="size-3.5" />
-                  <span>编辑</span>
-                  <span className="text-border">/</span>
-                  <span className="text-foreground">{pageName}</span>
-                  {curComponent && curComponentId !== 1 && (
-                    <>
-                      <span className="text-border">/</span>
-                      <span className="truncate text-foreground">
-                        {curComponent.desc || curComponent.name}
-                      </span>
-                    </>
-                  )}
-                </div>
-                <span className="shrink-0">拖拽左侧组件到画布</span>
+              <div className="flex h-9 shrink-0 items-center gap-1 border-b border-border bg-background px-2">
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="撤销"
+                  title="撤销"
+                  disabled={past.length === 0}
+                  onClick={undo}
+                >
+                  <Undo2 />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="重做"
+                  title="重做"
+                  disabled={future.length === 0}
+                  onClick={redo}
+                >
+                  <Redo2 />
+                </Button>
               </div>
               <div className="min-h-0 flex-1 overflow-auto bg-muted/40 p-4">
                 <div className="min-h-full rounded-lg border border-border bg-background shadow-sm">

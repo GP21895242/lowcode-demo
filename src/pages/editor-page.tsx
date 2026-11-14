@@ -34,6 +34,8 @@ export default function EditorPage({ pageId, view, fromEdit }: EditorPageProps) 
       curComponent: null,
       editType: "page",
       clipboard: null,
+      past: [],
+      future: [],
     });
     useVariablesStore.getState().setVariables(design.variables);
     useDataSourceStore.setState({ sources: design.sources, relations: design.relations });
