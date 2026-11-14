@@ -2,7 +2,9 @@ import { useForm, useStore } from "@tanstack/react-form";
 import * as React from "react";
 
 import { cn, getByPath } from "../../lib/utils";
-import { Label } from "../ui/label";
+import { Field as UiField, FieldContent, FieldError, FieldLabel } from "../ui/field";
+
+export { DatePicker, type DatePickerProps } from "./date-picker";
 
 export type FieldPath = string | number | (string | number)[];
 
@@ -114,6 +116,7 @@ export interface FieldProps {
   required?: boolean;
   className?: string;
   labelWidth?: number | string;
+  labelPosition?: "left" | "top";
   error?: React.ReactNode;
 }
 
@@ -124,6 +127,7 @@ export function Field({
   required,
   className,
   labelWidth,
+  labelPosition = "left",
   error,
 }: FieldProps) {
   const form = useAppFormContext();
@@ -139,22 +143,29 @@ export function Field({
   );
 
   return (
-    <div className={cn("mb-3 flex items-start gap-3", className)}>
+    <UiField
+      orientation={labelPosition === "top" ? "vertical" : "horizontal"}
+      data-invalid={error ? true : undefined}
+      className={cn("mb-3", className)}
+    >
       {label !== undefined ? (
-        <Label
+        <FieldLabel
           htmlFor={id}
-          className="shrink-0 pt-2 text-right text-sm font-normal text-muted-foreground"
-          style={{ width: labelWidth ?? 92 }}
+          className={cn(
+            "text-sm leading-none font-normal text-muted-foreground",
+            labelPosition === "top" ? "text-left" : "flex-none! pt-2 text-right",
+          )}
+          style={labelPosition === "top" ? undefined : { width: labelWidth ?? 92 }}
         >
           {required ? <span className="mr-0.5 text-destructive">*</span> : null}
           {label}
-        </Label>
+        </FieldLabel>
       ) : null}
-      <div className="min-w-0 flex-1">
+      <FieldContent className="min-w-0 gap-0">
         {children({ id, value, onChange })}
-        {error ? <p className="mt-1 text-xs text-destructive">{error}</p> : null}
-      </div>
-    </div>
+        {error ? <FieldError className="mt-1 text-xs">{error}</FieldError> : null}
+      </FieldContent>
+    </UiField>
   );
 }
 

@@ -8,7 +8,9 @@ export default (ctx: Context) => {
   ctx.registerComponent(ItemType.SearchForm, {
     name: ItemType.SearchForm,
     desc: "搜索区",
-    defaultProps: {},
+    defaultProps: {
+      labelPosition: { type: "static", value: "left" },
+    },
     dev: Dev,
     prod: Prod,
     setter: Setter as any,

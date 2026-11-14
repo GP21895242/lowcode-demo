@@ -1,10 +1,27 @@
 import { useState } from "react";
 
+import { Field } from "../../../components/form";
 import { Button } from "../../../components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../../components/ui/select";
 import { DataSourceSelect } from "../../data-source/components/data-source-select";
 import { useDataSourceFields } from "../../data-source/hooks";
 import { ItemType } from "../../item-type";
 import { useComponetsStore } from "../../stores/components";
+
+const LABEL_POSITION_OPTIONS = [
+  { label: "左侧", value: "left" },
+  { label: "顶部", value: "top" },
+];
+
+function unwrap(value: any) {
+  return value && typeof value === "object" && "value" in value ? value.value : value;
+}
 
 function Setter() {
   const curComponent = useComponetsStore((state) => state.curComponent);
@@ -47,6 +64,27 @@ function Setter() {
 
   return (
     <div className="py-2">
+      <Field name="labelPosition" label="标签位置">
+        {({ value, onChange }) => (
+          <Select
+            value={unwrap(value) ?? "left"}
+            onValueChange={(next) => onChange({ type: "static", value: next })}
+            items={LABEL_POSITION_OPTIONS}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {LABEL_POSITION_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+      </Field>
+
       <div className="mb-3 flex items-start gap-3">
         <span className="w-[92px] shrink-0 pt-2 text-right text-sm text-muted-foreground">
           数据源

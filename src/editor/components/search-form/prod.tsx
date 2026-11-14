@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 
-import { AppForm, Field, useAppForm } from "../../../components/form";
+import { AppForm, DatePicker, Field, useAppForm } from "../../../components/form";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import {
@@ -29,7 +29,7 @@ function unwrap(value: any) {
   return value && typeof value === "object" && "value" in value ? value.value : value;
 }
 
-function SearchFormProd({ children, onSearch }: CommonComponentProps) {
+function SearchFormProd({ children, onSearch, labelPosition }: CommonComponentProps) {
   const sources = useDataSourceStore((state) => state.sources);
 
   const items = useMemo<SearchItemInfo[]>(() => {
@@ -107,12 +107,11 @@ function SearchFormProd({ children, onSearch }: CommonComponentProps) {
 
     if (controlType === "date") {
       return (
-        <Input
+        <DatePicker
           id={api.id}
-          type="date"
           data-component-id={item.id}
           value={api.value ?? ""}
-          onChange={(event) => api.onChange(event.target.value)}
+          onChange={api.onChange}
         />
       );
     }
@@ -150,6 +149,7 @@ function SearchFormProd({ children, onSearch }: CommonComponentProps) {
                 key={item.name}
                 name={item.name}
                 label={item.label || field?.label || item.dataKey || "搜索项"}
+                labelPosition={labelPosition === "top" ? "top" : "left"}
               >
                 {(api) => renderControl(item, field, api)}
               </Field>

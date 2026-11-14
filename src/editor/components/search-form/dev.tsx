@@ -3,6 +3,7 @@ import React, { useMemo } from "react";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
+import { cn } from "../../../lib/utils";
 import { useDataSourceStore } from "../../data-source/store";
 import { useDrop } from "../../hooks/use-drop";
 import type { CommonComponentProps } from "../../interface";
@@ -11,9 +12,10 @@ function unwrap(value: any) {
   return value && typeof value === "object" && "value" in value ? value.value : value;
 }
 
-function SearchFormDev({ _id, _name, children }: CommonComponentProps) {
+function SearchFormDev({ _id, _name, labelPosition, children }: CommonComponentProps) {
   const { canDrop, drop } = useDrop(_id, _name);
   const sources = useDataSourceStore((state) => state.sources);
+  const labelOnTop = labelPosition === "top";
 
   const searchItems = useMemo(() => {
     return (
@@ -57,14 +59,18 @@ function SearchFormDev({ _id, _name, children }: CommonComponentProps) {
       data-component-id={_id}
       style={{ border: canDrop ? "1px solid #ccc" : "none" }}
     >
-      <div className="grid grid-cols-4 items-center gap-5">
+      <div className={cn("grid grid-cols-4 gap-5", labelOnTop ? "items-start" : "items-center")}>
         {searchItems.map((item: any) => (
-          <div key={item.key} className="flex items-center gap-2" data-component-id={item.id}>
+          <div
+            key={item.key}
+            className={labelOnTop ? "flex flex-col gap-1" : "flex items-center gap-2"}
+            data-component-id={item.id}
+          >
             <Label className="shrink-0 text-sm font-normal text-muted-foreground">
               {item.label}
             </Label>
             <Input
-              className="pointer-events-none"
+              className={cn("pointer-events-none", labelOnTop && "w-full")}
               disabled
               placeholder={item.sourceId ? "数据源查询" : ""}
             />
