@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
 import { getComponentById } from "../utils/utils";
 
 /** 页面根组件 id */
@@ -155,203 +154,190 @@ interface Action {
   pasteComponent: (referenceId: number) => Component | null;
 }
 
-export const useComponetsStore = create(
-  persist<State & Action>(
-    (set, get) => ({
-      components: [
-        {
-          id: 1,
-          name: "Page",
-          props: {},
-          desc: "页面",
-        },
-      ],
-      curComponent: null,
-      clipboard: null,
-      mode: "edit",
-      editType: "page",
-      addComponent: (component, parentId) =>
-        set((state) => {
-          // 如果有上级id，把当前组件添加到父组件的子组件中
-          if (parentId) {
-            // 通过父id递归查找父组件
-            const parentComponent = getComponentById(parentId, state.components);
+export const useComponetsStore = create<State & Action>()((set, get) => ({
+  components: [
+    {
+      id: 1,
+      name: "Page",
+      props: {},
+      desc: "页面",
+    },
+  ],
+  curComponent: null,
+  clipboard: null,
+  mode: "edit",
+  editType: "page",
+  addComponent: (component, parentId) =>
+    set((state) => {
+      // 如果有上级id，把当前组件添加到父组件的子组件中
+      if (parentId) {
+        // 通过父id递归查找父组件
+        const parentComponent = getComponentById(parentId, state.components);
 
-            if (parentComponent) {
-              if (parentComponent?.children) {
-                parentComponent?.children?.push(component);
-              } else {
-                parentComponent.children = [component];
-              }
-            }
-
-            component.parentId = parentId;
-            return { components: [...state.components] };
-          }
-          return { components: [...state.components, component] };
-        }),
-      setCurComponentId: (componentId) =>
-        set((state) => ({
-          curComponentId: componentId,
-          curComponent: getComponentById(componentId, state.components),
-        })),
-      updateComponentProps: (componentId, props) =>
-        set((state) => {
-          const component = getComponentById(componentId, state.components);
-          if (component) {
-            component.props = { ...component.props, ...props };
-
-            if (componentId === state.curComponentId) {
-              return {
-                curComponent: component,
-                components: [...state.components],
-              };
-            }
-
-            return { components: [...state.components] };
-          }
-
-          return { components: [...state.components] };
-        }),
-      updateComponent: (componentId: number, key: keyof Component, value: any) =>
-        set((state) => {
-          const component = getComponentById(componentId, state.components);
-          if (component) {
-            if (key === "desc") {
-              component[key] = value;
-            } else if (key === "hidden") {
-              component[key] = value;
-            }
-            return { components: [...state.components] };
-          }
-          return { components: [...state.components] };
-        }),
-      setMode: (mode) => set({ mode }),
-      setEditType: (editType) => set({ editType }),
-      deleteComponent: (componentId) => {
-        if (!componentId) return;
-
-        const component = getComponentById(componentId, get().components);
-        if (component?.parentId) {
-          const parentComponent = getComponentById(component.parentId, get().components);
-
-          if (parentComponent) {
-            parentComponent.children = parentComponent?.children?.filter(
-              (item) => item.id !== +componentId,
-            );
-
-            set({ components: [...get().components] });
+        if (parentComponent) {
+          if (parentComponent?.children) {
+            parentComponent?.children?.push(component);
+          } else {
+            parentComponent.children = [component];
           }
         }
-      },
-      insertComponent: (component, referenceId, position) =>
-        set((state) => {
-          const reference = getComponentById(referenceId, state.components);
 
-          if (!reference) return {};
+        component.parentId = parentId;
+        return { components: [...state.components] };
+      }
+      return { components: [...state.components, component] };
+    }),
+  setCurComponentId: (componentId) =>
+    set((state) => ({
+      curComponentId: componentId,
+      curComponent: getComponentById(componentId, state.components),
+    })),
+  updateComponentProps: (componentId, props) =>
+    set((state) => {
+      const component = getComponentById(componentId, state.components);
+      if (component) {
+        component.props = { ...component.props, ...props };
 
-          // 参照根组件时，直接插入到根组件的子节点中
-          if (reference.id === ROOT_COMPONENT_ID) {
-            reference.children ??= [];
-            const index = position === "before" ? 0 : reference.children.length;
+        if (componentId === state.curComponentId) {
+          return {
+            curComponent: component,
+            components: [...state.components],
+          };
+        }
 
-            component.parentId = reference.id;
-            reference.children.splice(index, 0, component);
+        return { components: [...state.components] };
+      }
 
-            return { components: [...state.components] };
-          }
+      return { components: [...state.components] };
+    }),
+  updateComponent: (componentId: number, key: keyof Component, value: any) =>
+    set((state) => {
+      const component = getComponentById(componentId, state.components);
+      if (component) {
+        if (key === "desc") {
+          component[key] = value;
+        } else if (key === "hidden") {
+          component[key] = value;
+        }
+        return { components: [...state.components] };
+      }
+      return { components: [...state.components] };
+    }),
+  setMode: (mode) => set({ mode }),
+  setEditType: (editType) => set({ editType }),
+  deleteComponent: (componentId) => {
+    if (!componentId) return;
 
-          const parent = reference.parentId
+    const component = getComponentById(componentId, get().components);
+    if (component?.parentId) {
+      const parentComponent = getComponentById(component.parentId, get().components);
+
+      if (parentComponent) {
+        parentComponent.children = parentComponent?.children?.filter(
+          (item) => item.id !== +componentId,
+        );
+
+        set({ components: [...get().components] });
+      }
+    }
+  },
+  insertComponent: (component, referenceId, position) =>
+    set((state) => {
+      const reference = getComponentById(referenceId, state.components);
+
+      if (!reference) return {};
+
+      // 参照根组件时，直接插入到根组件的子节点中
+      if (reference.id === ROOT_COMPONENT_ID) {
+        reference.children ??= [];
+        const index = position === "before" ? 0 : reference.children.length;
+
+        component.parentId = reference.id;
+        reference.children.splice(index, 0, component);
+
+        return { components: [...state.components] };
+      }
+
+      const parent = reference.parentId
+        ? getComponentById(reference.parentId, state.components)
+        : null;
+
+      if (!parent) return {};
+
+      parent.children ??= [];
+      const index = parent.children.findIndex((item) => item.id === reference.id);
+
+      if (index < 0) return {};
+
+      component.parentId = parent.id;
+      parent.children.splice(position === "before" ? index : index + 1, 0, component);
+
+      return { components: [...state.components] };
+    }),
+  moveComponent: (componentId, referenceId, position) =>
+    set((state) => {
+      if (componentId === referenceId) return {};
+
+      const component = getComponentById(componentId, state.components);
+      const reference = getComponentById(referenceId, state.components);
+
+      if (!component || !reference) return {};
+
+      // 不能移动到自身或自身的子组件中
+      let ancestorId = reference.parentId;
+      while (ancestorId) {
+        if (ancestorId === component.id) return {};
+        ancestorId = getComponentById(ancestorId, state.components)?.parentId;
+      }
+
+      const sourceParent = component.parentId
+        ? getComponentById(component.parentId, state.components)
+        : null;
+
+      if (!sourceParent?.children) return {};
+
+      const targetParent =
+        reference.id === ROOT_COMPONENT_ID
+          ? reference
+          : reference.parentId
             ? getComponentById(reference.parentId, state.components)
             : null;
 
-          if (!parent) return {};
+      if (!targetParent) return {};
 
-          parent.children ??= [];
-          const index = parent.children.findIndex((item) => item.id === reference.id);
+      sourceParent.children = sourceParent.children.filter((item) => item.id !== component.id);
+      targetParent.children ??= [];
 
-          if (index < 0) return {};
+      const index =
+        reference.id === ROOT_COMPONENT_ID
+          ? position === "before"
+            ? 0
+            : targetParent.children.length
+          : Math.max(
+              0,
+              targetParent.children.findIndex((item) => item.id === reference.id),
+            ) + (position === "after" ? 1 : 0);
 
-          component.parentId = parent.id;
-          parent.children.splice(position === "before" ? index : index + 1, 0, component);
+      component.parentId = targetParent.id;
+      targetParent.children.splice(index, 0, component);
 
-          return { components: [...state.components] };
-        }),
-      moveComponent: (componentId, referenceId, position) =>
-        set((state) => {
-          if (componentId === referenceId) return {};
-
-          const component = getComponentById(componentId, state.components);
-          const reference = getComponentById(referenceId, state.components);
-
-          if (!component || !reference) return {};
-
-          // 不能移动到自身或自身的子组件中
-          let ancestorId = reference.parentId;
-          while (ancestorId) {
-            if (ancestorId === component.id) return {};
-            ancestorId = getComponentById(ancestorId, state.components)?.parentId;
-          }
-
-          const sourceParent = component.parentId
-            ? getComponentById(component.parentId, state.components)
-            : null;
-
-          if (!sourceParent?.children) return {};
-
-          const targetParent =
-            reference.id === ROOT_COMPONENT_ID
-              ? reference
-              : reference.parentId
-                ? getComponentById(reference.parentId, state.components)
-                : null;
-
-          if (!targetParent) return {};
-
-          sourceParent.children = sourceParent.children.filter((item) => item.id !== component.id);
-          targetParent.children ??= [];
-
-          const index =
-            reference.id === ROOT_COMPONENT_ID
-              ? position === "before"
-                ? 0
-                : targetParent.children.length
-              : Math.max(
-                  0,
-                  targetParent.children.findIndex((item) => item.id === reference.id),
-                ) + (position === "after" ? 1 : 0);
-
-          component.parentId = targetParent.id;
-          targetParent.children.splice(index, 0, component);
-
-          return { components: [...state.components] };
-        }),
-      copyComponent: (componentId) => {
-        const component = getComponentById(componentId, get().components);
-
-        if (!component) return;
-
-        set({ clipboard: structuredClone(component) });
-      },
-      pasteComponent: (referenceId) => {
-        const { clipboard } = get();
-
-        if (!clipboard) return null;
-
-        const component = cloneComponentWithNewIds(clipboard);
-        get().insertComponent(component, referenceId, "after");
-
-        return component;
-      },
+      return { components: [...state.components] };
     }),
-    {
-      name: "components",
-      storage: createJSONStorage(() => localStorage),
-      // 只需要持久化components属性，把其他值过滤掉
-      partialize: (state) =>
-        Object.fromEntries(
-          Object.entries(state).filter(([key]) => ["components"].includes(key)),
-        ) as any,
-    },
-  ),
-);
+  copyComponent: (componentId) => {
+    const component = getComponentById(componentId, get().components);
+
+    if (!component) return;
+
+    set({ clipboard: structuredClone(component) });
+  },
+  pasteComponent: (referenceId) => {
+    const { clipboard } = get();
+
+    if (!clipboard) return null;
+
+    const component = cloneComponentWithNewIds(clipboard);
+    get().insertComponent(component, referenceId, "after");
+
+    return component;
+  },
+}));

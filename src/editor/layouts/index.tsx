@@ -21,8 +21,15 @@ import EditStage from "./stage/edit";
 import ProdStage from "./stage/prod";
 import Toolbar from "./toolbar";
 
-const Layout: React.FC = () => {
-  const { mode, curComponent, curComponentId } = useComponetsStore();
+interface LayoutProps {
+  pageId: string;
+  pageName: string;
+  view: "edit" | "preview";
+  fromEdit?: boolean;
+}
+
+const Layout: React.FC<LayoutProps> = ({ pageId, pageName, view, fromEdit }) => {
+  const { curComponent, curComponentId } = useComponetsStore();
   const { setComponentConfig } = useComponentConfigStore();
   const [loading, setLoading] = useState(true);
   const { mergeData } = usePageDataStore();
@@ -88,8 +95,8 @@ const Layout: React.FC = () => {
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
-      <Toolbar />
-      {mode === "edit" ? (
+      <Toolbar pageId={pageId} pageName={pageName} view={view} fromEdit={fromEdit} />
+      {view === "edit" ? (
         <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1">
           <ResizablePanel defaultSize={240} maxSize={400} minSize={200}>
             <Sidebar onDragging={onDragging} />
@@ -102,7 +109,7 @@ const Layout: React.FC = () => {
                   <MousePointer2 className="size-3.5" />
                   <span>编辑</span>
                   <span className="text-border">/</span>
-                  <span className="text-foreground">首页</span>
+                  <span className="text-foreground">{pageName}</span>
                   {curComponent && curComponentId !== 1 && (
                     <>
                       <span className="text-border">/</span>

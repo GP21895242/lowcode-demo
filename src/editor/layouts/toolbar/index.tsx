@@ -1,66 +1,69 @@
-import { AppWindow, Eye, GitBranch, Layers, Play } from "lucide-react";
-
+import { Pencil, Play, Save } from "lucide-react";
+import AppHeader, { type AppBreadcrumbItem } from "../../../pages/app-header";
 import { Button } from "../../../components/ui/button";
-import { useDataSourceRuntimeStore } from "../../data-source/runtime";
+import { toast } from "../../../components/ui/toast";
+import { useDataSourceStore } from "../../data-source/store";
 import { useComponetsStore } from "../../stores/components";
-import { usePageDataStore } from "../../stores/page-data";
+import { usePagesStore } from "../../stores/pages";
 import { useVariablesStore } from "../../stores/variable";
-import { getVariablesDefaultData } from "../../utils/utils";
 
-const Toolbar: React.FC = () => {
-  const { mode, setMode, setCurComponentId } = useComponetsStore();
-  const { resetData, mergeData } = usePageDataStore();
-  const { variables } = useVariablesStore();
+interface ToolbarProps {
+  pageId: string;
+  pageName: string;
+  view: "edit" | "preview";
+  fromEdit?: boolean;
+}
+
+const Toolbar: React.FC<ToolbarProps> = ({ pageId, pageName, view, fromEdit }) => {
+  const editHref = `#/pages/${encodeURIComponent(pageId)}/edit`;
+  const breadcrumbs: AppBreadcrumbItem[] =
+    view === "edit"
+      ? [{ label: "首页", href: "#/pages" }, { label: `编辑：${pageName}` }]
+      : [
+          { label: "首页", href: "#/pages" },
+          ...(fromEdit ? [{ label: `编辑：${pageName}`, href: editHref }] : []),
+          { label: fromEdit ? "预览" : `预览：${pageName}` },
+        ];
 
   function enterPreview() {
-    setMode("preview");
-    setCurComponentId(null);
-    // 预览前重置运行时数据，并重新注入变量默认值，避免变量绑定的内容丢失
-    resetData();
-    mergeData(getVariablesDefaultData(variables));
-    // 切换取数环境（编辑态 Mock / 预览态真实接口），清空已加载的数据源数据
-    useDataSourceRuntimeStore.getState().resetAll();
+    window.location.hash = `#/pages/${encodeURIComponent(pageId)}/preview?from=edit`;
+  }
+
+  function handleSave() {
+    const { components } = useComponetsStore.getState();
+    const { sources, relations } = useDataSourceStore.getState();
+    usePagesStore.getState().savePage(pageId, {
+      components,
+      variables: useVariablesStore.getState().variables,
+      sources,
+      relations,
+    });
+    toast.add({ title: "页面保存成功", type: "success" });
   }
 
   return (
-    <header className="flex h-12 shrink-0 items-center gap-2 border-b border-border bg-background px-4">
-      <div className="flex items-center gap-2">
-        <div className="flex size-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-          <Layers className="size-4" />
-        </div>
-        <span className="text-sm font-semibold">lowcode</span>
-      </div>
-      <div className="mx-1 h-5 w-px bg-border" />
-      <span className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground">
-        <GitBranch className="size-3.5" />
-        main
-      </span>
-      <span className="flex items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-xs">
-        <AppWindow className="size-3.5 text-muted-foreground" />
-        首页
-      </span>
-
-      <div className="flex-1" />
-
-      {mode === "edit" ? (
-        <Button size="sm" onClick={enterPreview}>
-          <Play />
-          预览
-        </Button>
-      ) : (
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => {
-            setMode("edit");
-            useDataSourceRuntimeStore.getState().resetAll();
-          }}
-        >
-          <Eye />
-          退出预览
-        </Button>
-      )}
-    </header>
+    <AppHeader
+      breadcrumbs={breadcrumbs}
+      actions={
+        view === "edit" ? (
+          <>
+            <Button size="sm" variant="outline" onClick={handleSave}>
+              <Save />
+              保存
+            </Button>
+            <Button size="sm" onClick={enterPreview}>
+              <Play />
+              预览
+            </Button>
+          </>
+        ) : (
+          <Button size="sm" variant="outline" onClick={() => (window.location.hash = editHref)}>
+            <Pencil />
+            编辑页面
+          </Button>
+        )
+      }
+    />
   );
 };
 
