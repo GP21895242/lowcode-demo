@@ -26,7 +26,7 @@ function SearchFormDev({ _id, _name, children }: CommonComponentProps) {
           ?.fields.find((sourceField) => sourceField.dataKey === dataKey);
 
         return {
-          key: String(unwrap(props.name) ?? index),
+          key: String(props._id ?? index),
           label: unwrap(props.label) || field?.label || dataKey,
           id: props._id,
           sourceId,

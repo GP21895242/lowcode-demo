@@ -15,7 +15,6 @@ import { useComponetsStore } from "../stores/components";
 import { usePageDataStore } from "../stores/page-data";
 import { useVariablesStore } from "../stores/variable";
 import { getVariablesDefaultData } from "../utils/utils";
-import SelectionMenu from "./selection-menu";
 import Setting from "./setting";
 import Sidebar from "./sidebar";
 import EditStage from "./stage/edit";
@@ -120,7 +119,6 @@ const Layout: React.FC = () => {
                   <EditStage ref={editStageRef} />
                 </div>
               </div>
-              <SelectionMenu />
             </div>
           </ResizablePanel>
           <ResizableHandle />

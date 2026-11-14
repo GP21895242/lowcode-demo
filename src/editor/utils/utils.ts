@@ -24,6 +24,40 @@ export function getComponentById(id: number | null, components: Component[]): Co
 }
 
 /**
+ * 获取组件从根节点到自身的路径
+ *
+ * @param id 组件 id
+ * @param components 组件数组
+ * @returns 组件路径，从根节点开始
+ */
+export function getComponentPath(id: number | null, components: Component[]): Component[] {
+  if (!id) return [];
+
+  const path: Component[] = [];
+
+  function walk(list: Component[], trail: Component[]): boolean {
+    for (const component of list) {
+      const nextTrail = [...trail, component];
+
+      if (component.id === +id!) {
+        path.push(...nextTrail);
+        return true;
+      }
+
+      if (component.children?.length && walk(component.children, nextTrail)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  walk(components, []);
+
+  return path;
+}
+
+/**
  * 加载远程组件
  *
  * @param url - 组件的URL地址

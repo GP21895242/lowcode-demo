@@ -39,7 +39,7 @@ const EditStage = (_: any, ref: any) => {
         const ele = path[i];
         if (ele.getAttribute && ele.getAttribute("data-component-id")) {
           const componentId = ele.getAttribute("data-component-id");
-          setCurComponentId(componentId);
+          setCurComponentId(Number(componentId));
           setHoverComponentId(undefined);
           return;
         }
@@ -69,10 +69,10 @@ const EditStage = (_: any, ref: any) => {
         if (ele.getAttribute && ele.getAttribute("data-component-id")) {
           const componentId = ele.getAttribute("data-component-id");
           if (componentId) {
-            if (curComponentId === componentId) {
+            if (curComponentId === Number(componentId)) {
               setHoverComponentId(undefined);
             } else {
-              setHoverComponentId(componentId);
+              setHoverComponentId(Number(componentId));
             }
             return;
           }

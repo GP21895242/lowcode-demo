@@ -43,7 +43,11 @@ function FormDev({ _id, _name, children }: CommonComponentProps) {
     >
       <div className="flex flex-col gap-4">
         {formItems.map((item: any) => (
-          <div key={item.name} className="flex items-center gap-3" data-component-id={item.id}>
+          <div
+            key={item.id ?? item.name}
+            className="flex items-center gap-3"
+            data-component-id={item.id}
+          >
             <Label className="w-[92px] shrink-0 text-right text-sm font-normal text-muted-foreground">
               {item.label}
             </Label>
