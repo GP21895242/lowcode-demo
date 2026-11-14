@@ -2,6 +2,7 @@ import type { Context } from "../../interface";
 import { ItemType } from "../../item-type";
 import TableDev from "./dev";
 import TableProd from "./prod";
+import Setter from "./setter";
 
 export default (ctx: Context) => {
   ctx.registerComponent(ItemType.Table, {
@@ -10,13 +11,7 @@ export default (ctx: Context) => {
     defaultProps: {},
     dev: TableDev,
     prod: TableProd,
-    setter: [
-      {
-        name: "url",
-        label: "url",
-        type: "input",
-      },
-    ],
+    setter: Setter as any,
     methods: [
       {
         name: "search",

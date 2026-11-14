@@ -2,6 +2,7 @@ import type { Context } from "../../interface";
 import { ItemType } from "../../item-type";
 import Dev from "./dev";
 import Prod from "./prod";
+import Setter from "./setter";
 
 export default (ctx: Context) => {
   ctx.registerComponent(ItemType.SearchFormItem, {
@@ -11,33 +12,12 @@ export default (ctx: Context) => {
       return {
         name: { type: "static", value: new Date().getTime() },
         label: { type: "static", value: "标题" },
+        type: { type: "static", value: "auto" },
       };
     },
     dev: Dev,
     prod: Prod,
-    setter: [
-      {
-        name: "type",
-        label: "类型",
-        type: "select",
-        options: [
-          {
-            label: "输入框",
-            value: "input",
-          },
-        ],
-      },
-      {
-        name: "label",
-        label: "标题",
-        type: "input",
-      },
-      {
-        name: "name",
-        label: "字段",
-        type: "input",
-      },
-    ],
+    setter: Setter as any,
     order: 9,
     allowDrag: [ItemType.SearchForm],
   });

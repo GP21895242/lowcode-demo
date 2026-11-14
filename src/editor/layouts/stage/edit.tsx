@@ -107,6 +107,8 @@ const EditStage = (_: any, ref: any) => {
         } else if (component.props[cur]?.type === "variable") {
           const variableName = component.props[cur].value;
           prev[cur] = `\${${variableName}}`;
+        } else if (component.props[cur]?.type === "dataSource") {
+          prev[cur] = component.props[cur].value;
         }
       } else {
         prev[cur] = component.props[cur];

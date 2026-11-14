@@ -23,6 +23,8 @@ const ProdStage: React.FC = () => {
           const variableName = component.props[cur].value;
           // 如果data中有值，则取data中的值。否则取变量的默认值
           prev[cur] = data[variableName];
+        } else if (component.props[cur]?.type === "dataSource") {
+          prev[cur] = component.props[cur].value;
         }
       } else {
         prev[cur] = component.props[cur];

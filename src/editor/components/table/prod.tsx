@@ -1,4 +1,4 @@
-﻿import axios from "axios";
+import axios from "axios";
 import React, {
   forwardRef,
   useCallback,
@@ -16,7 +16,10 @@ import {
   TableHeader,
   TableRow,
 } from "../../../components/ui/table";
-import { formatDate } from "../../../lib/utils";
+import { formatDate, getByPath } from "../../../lib/utils";
+import { useDataSource, useDataSourceFields } from "../../data-source/hooks";
+import { useDataSourceRuntimeStore } from "../../data-source/runtime";
+import type { DataSourceBinding } from "../../data-source/types";
 import type { CommonComponentProps } from "../../interface";
 
 interface TableColumnConfig {
@@ -26,44 +29,60 @@ interface TableColumnConfig {
   options?: any[];
 }
 
-function TableProd({ url, children, _execEventFlow }: CommonComponentProps, ref: any) {
-  const [data, setData] = useState<any[]>([]);
+function TableProd({ url, children, _execEventFlow, dataSource }: CommonComponentProps, ref: any) {
+  const sourceId = (dataSource as DataSourceBinding | undefined)?.sourceId;
+  const { rows, loading, error, params } = useDataSource(sourceId);
+  const fields = useDataSourceFields(sourceId);
+
+  const [legacyData, setLegacyData] = useState<any[]>([]);
   const [searchParams, setSearchParams] = useState({});
-  const [loading, setLoading] = useState(false);
+  const [legacyLoading, setLegacyLoading] = useState(false);
 
-  const getData = useCallback(
+  const getLegacyData = useCallback(
     async (params?: any) => {
-      if (!url) return;
+      if (!url || sourceId) return;
 
-      setLoading(true);
+      setLegacyLoading(true);
 
       try {
         const response = await axios.get(url, { params });
-        setData(response.data);
+        setLegacyData(response.data);
       } finally {
-        setLoading(false);
+        setLegacyLoading(false);
       }
     },
-    [url],
+    [url, sourceId],
   );
 
   useEffect(() => {
-    void getData(searchParams);
-  }, [getData, searchParams]);
+    if (!sourceId) {
+      void getLegacyData(searchParams);
+    }
+  }, [getLegacyData, searchParams, sourceId]);
 
   useImperativeHandle(
     ref,
     () => ({
-      search: setSearchParams,
+      search: (values: any) => {
+        if (sourceId) {
+          void useDataSourceRuntimeStore.getState().search(sourceId, values ?? {});
+          return;
+        }
+        setSearchParams(values ?? {});
+      },
       reload: () => {
-        void getData(searchParams);
+        if (sourceId) {
+          void useDataSourceRuntimeStore.getState().load(sourceId, { force: true });
+          return;
+        }
+        void getLegacyData(searchParams);
       },
     }),
-    [getData, searchParams],
+    [sourceId, getLegacyData, searchParams],
   );
 
   const columns = useMemo<TableColumnConfig[]>(() => {
-    return (
+    const childColumns =
       React.Children.map(children, (item: any) => {
         return {
           title: item.props?.title,
@@ -71,12 +90,44 @@ function TableProd({ url, children, _execEventFlow }: CommonComponentProps, ref:
           type: item.props?.type,
           options: item.props?.options,
         };
-      }) || []
-    );
-  }, [children]);
+      }) || [];
+
+    if (childColumns.length > 0) {
+      return childColumns;
+    }
+
+    return fields
+      .filter((field) => field.visible)
+      .map((field) => ({
+        title: field.label,
+        dataIndex: field.dataKey,
+        type: field.type === "date" ? "date" : "text",
+      }));
+  }, [children, fields]);
+
+  const fieldMap = useMemo(() => new Map(fields.map((field) => [field.dataKey, field])), [fields]);
+
+  const data = sourceId ? rows : legacyData;
+  const isLoading = sourceId ? loading : legacyLoading;
+  const sort = params?.sort;
+
+  function handleSort(dataIndex: string) {
+    if (!sourceId) return;
+    const field = fieldMap.get(dataIndex);
+    if (!field?.sortable) return;
+
+    const next =
+      sort?.field === dataIndex
+        ? sort.order === "asc"
+          ? { field: dataIndex, order: "desc" as const }
+          : undefined
+        : { field: dataIndex, order: "asc" as const };
+
+    void useDataSourceRuntimeStore.getState().setSort(sourceId, next);
+  }
 
   function renderCell(row: any, column: TableColumnConfig) {
-    const value = row?.[column.dataIndex];
+    const value = getByPath(row, column.dataIndex);
 
     if (column.type === "date") {
       return formatDate(value) ?? "";
@@ -109,13 +160,31 @@ function TableProd({ url, children, _execEventFlow }: CommonComponentProps, ref:
     <Table>
       <TableHeader>
         <TableRow>
-          {columns.map((column) => (
-            <TableHead key={column.dataIndex}>{column.title}</TableHead>
-          ))}
+          {columns.map((column) => {
+            const field = fieldMap.get(column.dataIndex);
+            return (
+              <TableHead key={column.dataIndex}>
+                {sourceId && field?.sortable ? (
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1 select-none"
+                    onClick={() => handleSort(column.dataIndex)}
+                  >
+                    {column.title}
+                    <span className="text-[10px] text-muted-foreground">
+                      {sort?.field === column.dataIndex ? (sort.order === "asc" ? "↑" : "↓") : "↕"}
+                    </span>
+                  </button>
+                ) : (
+                  column.title
+                )}
+              </TableHead>
+            );
+          })}
         </TableRow>
       </TableHeader>
       <TableBody>
-        {loading ? (
+        {isLoading ? (
           <TableRow>
             <TableCell
               colSpan={Math.max(columns.length, 1)}
@@ -124,9 +193,18 @@ function TableProd({ url, children, _execEventFlow }: CommonComponentProps, ref:
               加载中...
             </TableCell>
           </TableRow>
+        ) : error ? (
+          <TableRow>
+            <TableCell
+              colSpan={Math.max(columns.length, 1)}
+              className="py-6 text-center text-destructive"
+            >
+              数据源加载失败：{error}
+            </TableCell>
+          </TableRow>
         ) : data.length ? (
           data.map((row, rowIndex) => (
-            <TableRow key={row.id ?? rowIndex}>
+            <TableRow key={getByPath(row, fields[0]?.dataKey ?? "id") ?? rowIndex}>
               {columns.map((column) => (
                 <TableCell key={column.dataIndex}>{renderCell(row, column)}</TableCell>
               ))}

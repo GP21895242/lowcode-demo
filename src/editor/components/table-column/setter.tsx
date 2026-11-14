@@ -14,7 +14,10 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../../components/ui/tooltip";
 import CommonSetter from "../../common/common-setter";
 import SortableList from "../../common/sortable-list";
+import { FieldSelect } from "../../data-source/components/field-select";
 import FlowEvent from "../../layouts/flow-event";
+import { useComponetsStore } from "../../stores/components";
+import { getComponentById } from "../../utils/utils";
 
 const setter = [
   {
@@ -30,11 +33,6 @@ const setter = [
   {
     name: "title",
     label: "标题",
-    type: "input",
-  },
-  {
-    name: "dataIndex",
-    label: "字段",
     type: "input",
   },
 ];
@@ -150,10 +148,34 @@ function OptionsFormItem({ value, onChange }: any) {
 
 function Setter() {
   const type = useFieldValue("type");
+  const curComponent = useComponetsStore((state) => state.curComponent);
+  const components = useComponetsStore((state) => state.components);
+
+  const parent = curComponent?.parentId
+    ? getComponentById(curComponent.parentId, components)
+    : null;
+  const sourceId = (parent?.props as any)?.dataSource?.value?.sourceId as string | undefined;
 
   return (
     <>
       <CommonSetter setters={setter} />
+      <Field name="dataIndex" label="字段">
+        {({ value, onChange }) =>
+          sourceId ? (
+            <FieldSelect
+              sourceId={sourceId}
+              value={value?.value}
+              onChange={(next) => onChange({ type: "static", value: next })}
+            />
+          ) : (
+            <Input
+              value={value?.value ?? ""}
+              onChange={(event) => onChange({ type: "static", value: event.target.value })}
+              placeholder="例如 name，绑定数据源后可直接选择"
+            />
+          )
+        }
+      </Field>
       {type === "option" ? (
         <Field name="options">
           {({ value, onChange }) => <OptionsFormItem value={value} onChange={onChange} />}

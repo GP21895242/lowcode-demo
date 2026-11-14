@@ -2,6 +2,7 @@ import type { Context } from "../../interface";
 import { ItemType } from "../../item-type";
 import Dev from "./dev";
 import Prod from "./prod";
+import Setter from "./setter";
 
 export default (ctx: Context) => {
   ctx.registerComponent(ItemType.SearchForm, {
@@ -10,6 +11,7 @@ export default (ctx: Context) => {
     defaultProps: {},
     dev: Dev,
     prod: Prod,
+    setter: Setter as any,
     events: [
       {
         name: "onSearch",

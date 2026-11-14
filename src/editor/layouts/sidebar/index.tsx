@@ -1,18 +1,20 @@
-import { Blocks, Braces, ListTree } from "lucide-react";
+import { Blocks, Braces, Database, ListTree } from "lucide-react";
 import { useState } from "react";
 
 import { cn } from "../../../lib/utils";
 import Material from "../material";
+import DataSources from "./data-sources";
 import DefineVariable from "./define-variable";
 import Outline from "./outline";
 import Variables from "./variables";
 
-type MenuKey = "material" | "outline" | "variables";
+type MenuKey = "material" | "outline" | "variables" | "dataSources";
 
 const menus: { key: MenuKey; label: string; icon: typeof Blocks }[] = [
   { key: "material", label: "组件库", icon: Blocks },
   { key: "outline", label: "大纲", icon: ListTree },
   { key: "variables", label: "变量", icon: Braces },
+  { key: "dataSources", label: "数据源", icon: Database },
 ];
 
 const Sidebar: React.FC<{ onDragging?: () => void }> = ({ onDragging }) => {
@@ -55,6 +57,7 @@ const Sidebar: React.FC<{ onDragging?: () => void }> = ({ onDragging }) => {
           {activeKey === "material" && <Material onDragging={onDragging} />}
           {activeKey === "outline" && <Outline />}
           {activeKey === "variables" && <Variables onEdit={() => setVariableVisible(true)} />}
+          {activeKey === "dataSources" && <DataSources />}
         </div>
       </div>
 

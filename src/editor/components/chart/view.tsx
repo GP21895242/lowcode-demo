@@ -4,9 +4,12 @@ import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { useMemo } from "react";
 
+import { getByPath } from "../../../lib/utils";
+
 export interface ChartRow {
   label: string;
   value: number;
+  raw?: any;
 }
 
 export const DEMO_DATA: ChartRow[] = [
@@ -43,6 +46,7 @@ interface ChartViewProps {
   xKey?: string;
   yKey?: string;
   height?: number;
+  onSelect?: (row: any) => void;
 }
 
 export function ChartView({
@@ -51,12 +55,24 @@ export function ChartView({
   xKey = "label",
   yKey = "value",
   height = 260,
+  onSelect,
 }: ChartViewProps) {
   const rows = useMemo(() => {
-    return parseData(data).map((item, index) => ({
-      label: String(item?.[xKey] ?? index + 1),
-      value: Number(item?.[yKey] ?? 0),
-    }));
+    const grouped = new Map<string, ChartRow>();
+
+    parseData(data).forEach((item, index) => {
+      const label = String(getByPath(item, xKey) ?? index + 1);
+      const value = Number(getByPath(item, yKey) ?? 0);
+      const existed = grouped.get(label);
+
+      if (existed) {
+        existed.value += value;
+      } else {
+        grouped.set(label, { label, value, raw: item });
+      }
+    });
+
+    return [...grouped.values()];
   }, [data, xKey, yKey]);
 
   const definition = useMemo(() => {
@@ -79,5 +95,12 @@ export function ChartView({
     });
   }, [rows, chartType]);
 
-  return <Chart definition={definition} height={height} ariaLabel="数据图表" />;
+  return (
+    <Chart
+      definition={definition}
+      height={height}
+      ariaLabel="数据图表"
+      onSelect={onSelect ? (point) => onSelect((point as any)?.datum?.raw) : undefined}
+    />
+  );
 }

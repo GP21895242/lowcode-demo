@@ -1,6 +1,7 @@
 import { AppWindow, Eye, GitBranch, Layers, Play } from "lucide-react";
 
 import { Button } from "../../../components/ui/button";
+import { useDataSourceRuntimeStore } from "../../data-source/runtime";
 import { useComponetsStore } from "../../stores/components";
 import { usePageDataStore } from "../../stores/page-data";
 import { useVariablesStore } from "../../stores/variable";
@@ -17,6 +18,8 @@ const Toolbar: React.FC = () => {
     // 预览前重置运行时数据，并重新注入变量默认值，避免变量绑定的内容丢失
     resetData();
     mergeData(getVariablesDefaultData(variables));
+    // 切换取数环境（编辑态 Mock / 预览态真实接口），清空已加载的数据源数据
+    useDataSourceRuntimeStore.getState().resetAll();
   }
 
   return (
@@ -50,6 +53,7 @@ const Toolbar: React.FC = () => {
           variant="outline"
           onClick={() => {
             setMode("edit");
+            useDataSourceRuntimeStore.getState().resetAll();
           }}
         >
           <Eye />
