@@ -2,9 +2,11 @@ import {
   Box,
   ChartColumn,
   Columns3,
+  LayoutPanelTop,
   LayoutTemplate,
   type LucideIcon,
   MousePointerClick,
+  NotebookTabs,
   PanelTop,
   PanelsTopLeft,
   Rows3,
@@ -38,8 +40,10 @@ const iconMap: Record<string, LucideIcon> = {
   SearchForm: Search,
   SearchFormItem: Search,
   Space: Rows3,
+  TabPane: LayoutPanelTop,
   Table: Table2,
   TableColumn: Columns3,
+  Tabs: NotebookTabs,
 };
 
 const ComponentItem: React.FC<ComponentItemProps> = ({

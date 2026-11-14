@@ -13,4 +13,6 @@ export const ItemType = {
   Page: "Page",
   Box: "Box",
   Card: "Card",
+  Tabs: "Tabs",
+  TabPane: "TabPane",
 };

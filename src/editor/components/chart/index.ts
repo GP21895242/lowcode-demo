@@ -18,6 +18,6 @@ export default (ctx: Context) => {
     prod: ChartProd,
     setter: Setter as any,
     order: 10,
-    allowDrag: [ItemType.Page, ItemType.Space, ItemType.Card],
+    allowDrag: [ItemType.Page, ItemType.Space, ItemType.Card, ItemType.TabPane],
   });
 };
