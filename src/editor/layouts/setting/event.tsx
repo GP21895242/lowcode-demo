@@ -14,6 +14,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from "../../../components/ui/sheet";
+import { useCardTemplate } from "../../card-template/store";
+import { ItemType } from "../../item-type";
 import { useComponentConfigStore } from "../../stores/component-config";
 import { useComponetsStore } from "../../stores/components";
 import FlowEvent from "../flow-event";
@@ -21,6 +23,8 @@ import FlowEvent from "../flow-event";
 const ComponentEvent = () => {
   const { curComponent, curComponentId, updateComponentProps } = useComponetsStore();
   const { componentConfig } = useComponentConfigStore();
+  const isCardInstance = curComponent?.name === ItemType.CardInstance;
+  const template = useCardTemplate(isCardInstance ? curComponent?.props?.templateId : undefined);
 
   const [open, setOpen] = useState(false);
   const [eventName, setEventName] = useState("");
@@ -41,7 +45,12 @@ const ComponentEvent = () => {
 
   if (!curComponent) return null;
 
-  const events = componentConfig[curComponent.name]?.events || [];
+  const events = isCardInstance
+    ? (template?.contract.events ?? []).map((event) => ({
+        name: event.name,
+        desc: event.label || event.name,
+      }))
+    : componentConfig[curComponent.name]?.events || [];
 
   return (
     <div className="pt-2">

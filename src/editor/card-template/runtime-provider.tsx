@@ -71,14 +71,22 @@ export function CardRuntimeProvider({
   const dataRef = useRef(data);
   const valuesRef = useRef(values);
 
-  // 输入值优先取页面配置，其次取契约绑定的页面变量，最后回落到默认值
+  // 输入值优先取页面配置，支持静态值与页面变量绑定，其次取契约默认绑定与默认值
   const resolveInputValue = useCallback(
     (def: CardInputDef) => {
       const raw = values[def.key];
-      if (raw !== undefined && raw !== null) return raw;
+      const readPageValue = (key: string) => pageData[key] ?? getByPath(pageData, key);
+
+      if (raw?.type === "static" && raw.value !== undefined) return raw.value;
+      if (raw?.type === "variable") {
+        const bound = readPageValue(String(raw.value));
+        if (bound !== undefined && bound !== null) return bound;
+      } else if (raw !== undefined && raw !== null && raw?.type !== "static") {
+        return raw;
+      }
 
       if (def.variable) {
-        const fromPage = getByPath(pageData, def.variable);
+        const fromPage = readPageValue(def.variable);
         if (fromPage !== undefined && fromPage !== null) return fromPage;
       }
 
@@ -87,25 +95,34 @@ export function CardRuntimeProvider({
     [pageData, values],
   );
 
+  const resolvedValues = useMemo(
+    () =>
+      contract.inputs.reduce<Record<string, any>>((next, def) => {
+        next[def.key] = resolveInputValue(def);
+        return next;
+      }, {}),
+    [contract.inputs, resolveInputValue],
+  );
+
   // 变量型输入直接并入卡片数据域，与页面数据隔离
   const inputVarValues = useMemo(
     () =>
       contract.inputs.reduce<Record<string, any>>((next, def) => {
         if (def.binding.kind === "var") {
-          next[def.binding.variable] = resolveInputValue(def);
+          next[def.binding.variable] = resolvedValues[def.key];
         }
         return next;
       }, {}),
-    [contract.inputs, resolveInputValue],
+    [contract.inputs, resolvedValues],
   );
 
   const inputVarsRef = useRef(inputVarValues);
 
   useLayoutEffect(() => {
     dataRef.current = data;
-    valuesRef.current = values;
+    valuesRef.current = resolvedValues;
     inputVarsRef.current = inputVarValues;
-  }, [data, inputVarValues, values]);
+  }, [data, inputVarValues, resolvedValues]);
 
   // 父组件布局 effect 先于子组件取数 effect 执行，确保私有源已注册
   useLayoutEffect(() => {
@@ -117,13 +134,13 @@ export function CardRuntimeProvider({
 
   const getData = useCallback(
     (key: string) => {
-      if (key === "$props") return values;
+      if (key === "$props") return resolvedValues;
       if (key.startsWith("$props.")) {
-        return getByPath(values, key.slice("$props.".length));
+        return getByPath(resolvedValues, key.slice("$props.".length));
       }
       return getByPath({ ...data, ...inputVarValues }, key);
     },
-    [data, inputVarValues, values],
+    [data, inputVarValues, resolvedValues],
   );
 
   const setCardData = useCallback((key: string, value: any) => {
@@ -181,12 +198,12 @@ export function CardRuntimeProvider({
 
       overrides[runtimeId] = {
         ...(overrides[runtimeId] ?? {}),
-        [def.binding.targetProp]: resolveInputValue(def),
+        [def.binding.targetProp]: resolvedValues[def.key],
       };
     });
 
     return overrides;
-  }, [contract.inputs, expanded, resolveInputValue]);
+  }, [contract.inputs, expanded, resolvedValues]);
 
   const emit = useCallback(
     (event: string, payload: any) => {
@@ -201,12 +218,12 @@ export function CardRuntimeProvider({
       getDataSnapshot: () => ({
         ...data,
         ...inputVarValues,
-        $props: values,
+        $props: resolvedValues,
       }),
       setData: setCardData,
       getComponentRef: getInternalComponentRef,
     }),
-    [data, getData, getInternalComponentRef, inputVarValues, setCardData, values],
+    [data, getData, getInternalComponentRef, inputVarValues, resolvedValues, setCardData],
   );
 
   const setInput = useCallback(
@@ -274,7 +291,7 @@ export function CardRuntimeProvider({
       scopeId,
       contract,
       expanded: expanded as ExpandedTemplate,
-      inputs: values,
+      inputs: resolvedValues,
       getData,
       resolveSource,
       propOverrides,
@@ -287,7 +304,7 @@ export function CardRuntimeProvider({
       scopeId,
       contract,
       expanded,
-      values,
+      resolvedValues,
       getData,
       resolveSource,
       propOverrides,

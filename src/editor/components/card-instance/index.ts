@@ -2,6 +2,7 @@ import { ItemType } from "../../item-type";
 import type { Context } from "../../interface";
 import CardInstanceDev from "./dev";
 import CardInstanceProd from "./prod";
+import CardInstanceSetter from "./setter";
 
 /**
  * 卡片实例组件：页面只持有模板引用与契约数据，内部实现由模板独立维护
@@ -14,7 +15,7 @@ export default function registerCardInstanceComponent(ctx: Context) {
     defaultProps: () => ({}),
     dev: CardInstanceDev,
     prod: CardInstanceProd,
-    setter: [],
+    setter: CardInstanceSetter as any,
     events: [],
     methods: [],
     order: 1.1,

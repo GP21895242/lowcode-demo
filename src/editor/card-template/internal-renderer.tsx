@@ -49,10 +49,12 @@ export default function CardInternalRenderer({ readonly = false }: CardInternalR
     return events.reduce<Record<string, any>>((prev, event) => {
       const binding = component.props?.[event.name];
 
-      if (binding?.children) {
+      if (binding?.children || contractEvents.has(event.name)) {
         prev[event.name] = (params: any) => {
           // 内部事件先在卡片内闭环，命中契约事件再向上 emit
-          execEventFlow(binding.children, params, params, domain);
+          if (binding?.children) {
+            execEventFlow(binding.children, params, params, domain);
+          }
 
           if (contractEvents.has(event.name)) {
             emit(event.name, params);

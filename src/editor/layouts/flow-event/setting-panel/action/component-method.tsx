@@ -19,6 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../../../../components/ui/select";
+import { useCardTemplate } from "../../../../card-template/store";
+import { ItemType } from "../../../../item-type";
 import { useComponentConfigStore } from "../../../../stores/component-config";
 import { useComponetsStore } from "../../../../stores/components";
 import { getComponentById } from "../../../../utils/utils";
@@ -100,7 +102,14 @@ const ComponentMethodSetting = () => {
     return getComponentById(componentId, components);
   }, [componentId, components]);
 
-  const methods = componentConfig[component?.name || ""]?.methods;
+  const isCardInstance = component?.name === ItemType.CardInstance;
+  const template = useCardTemplate(isCardInstance ? component?.props?.templateId : undefined);
+  const methods = isCardInstance
+    ? (template?.contract.methods ?? []).map((method) => ({
+        name: method.name,
+        desc: method.label || method.name,
+      }))
+    : componentConfig[component?.name || ""]?.methods;
   const methodOptions = (methods ?? []).map((method: any) => ({
     label: method.desc,
     value: method.name,
