@@ -1,6 +1,7 @@
 import { forwardRef, useImperativeHandle } from "react";
 import { getCardInstance } from "../../card-template/registry";
 import { useCardTemplate } from "../../card-template/store";
+import { emitCardEvent } from "../../interaction/runtime";
 import type { CommonComponentProps } from "../../interface";
 import { execEventFlow } from "../../utils/action";
 import CardInstanceView from "./view";
@@ -36,6 +37,9 @@ const CardInstanceProd = forwardRef<any, CommonComponentProps>((props, ref) => {
     if (binding?.children) {
       execEventFlow(binding.children, payload, payload);
     }
+
+    // 页面级联动只认契约事件，内部实现不参与
+    emitCardEvent(scopeId, event, payload);
   };
 
   return (

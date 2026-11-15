@@ -6,6 +6,7 @@ import { useDataSourceRuntimeStore } from "../editor/data-source/runtime";
 import { useDataSourceStore } from "../editor/data-source/store";
 import Layout from "../editor/layouts";
 import { usePageSearchStore } from "../editor/search/store";
+import { useInteractionStore } from "../editor/interaction/runtime";
 import { clearComponentRef } from "../editor/stores/component-ref";
 import { useComponetsStore } from "../editor/stores/components";
 import { usePageDataStore } from "../editor/stores/page-data";
@@ -41,6 +42,7 @@ export default function EditorPage({ pageId, view, fromEdit }: EditorPageProps) 
     useVariablesStore.getState().setVariables(design.variables);
     useDataSourceStore.setState({ sources: design.sources, relations: design.relations });
     usePageSearchStore.getState().setConfig(design.search);
+    useInteractionStore.getState().setInteractions(design.interactions ?? []);
     clearComponentRef();
     queueMicrotask(() => {
       if (!cancelled) setReady(true);
@@ -51,6 +53,7 @@ export default function EditorPage({ pageId, view, fromEdit }: EditorPageProps) 
       useDataSourceRuntimeStore.getState().resetAll();
       usePageDataStore.getState().resetData();
       usePageSearchStore.getState().setConfig(null);
+      useInteractionStore.getState().setInteractions([]);
       clearComponentRef();
     };
   }, [pageId]);

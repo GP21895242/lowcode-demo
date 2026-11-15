@@ -250,6 +250,16 @@ export function CardRuntimeProvider({
     });
   }, [expanded, scope]);
 
+  // 联动写入的运行时输入变化后按新输入重新取数，卡片内部过滤才会立即生效
+  const previousRuntimeInputsRef = useRef(scopedRuntimeInputs);
+
+  useEffect(() => {
+    if (previousRuntimeInputsRef.current === scopedRuntimeInputs) return;
+
+    previousRuntimeInputsRef.current = scopedRuntimeInputs;
+    reload();
+  }, [reload, scopedRuntimeInputs]);
+
   // 契约方法按名称匹配内部组件 ref，模板作者只需让内部组件暴露同名方法
   const invoke = useCallback(
     (method: string, args?: any) => {

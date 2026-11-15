@@ -3,6 +3,7 @@ import AppHeader, { type AppBreadcrumbItem } from "../../../pages/app-header";
 import { Button } from "../../../components/ui/button";
 import { toast } from "../../../components/ui/toast";
 import { useDataSourceStore } from "../../data-source/store";
+import { useInteractionStore } from "../../interaction/runtime";
 import { usePageSearchStore } from "../../search/store";
 import { useComponetsStore } from "../../stores/components";
 import { PAGE_SCHEMA_VERSION, usePagesStore } from "../../stores/pages";
@@ -41,7 +42,7 @@ const Toolbar: React.FC<ToolbarProps> = ({ pageId, pageName, view, fromEdit }) =
       variables: useVariablesStore.getState().variables,
       sources,
       relations,
-      interactions: currentPage?.interactions ?? [],
+      interactions: useInteractionStore.getState().interactions,
       search: usePageSearchStore.getState().config ?? currentPage?.search,
       dismissedSuggestions: currentPage?.dismissedSuggestions ?? [],
     });

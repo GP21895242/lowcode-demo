@@ -1,0 +1,161 @@
+import { create } from "zustand";
+
+import { getByPath } from "../../lib/utils";
+import { invokeCardMethod, setCardInput } from "../card-template/registry";
+import { usePageDataStore } from "../stores/page-data";
+import type { InteractionAction, PageInteraction } from "./types";
+
+/** 单条联动链的最大深度，超出即丢弃，避免环形触发无限执行 */
+const MAX_CHAIN_DEPTH = 8;
+
+interface State {
+  interactions: PageInteraction[];
+}
+
+interface Action {
+  setInteractions: (interactions: PageInteraction[]) => void;
+  addInteraction: (interaction: PageInteraction) => void;
+  updateInteraction: (id: string, patch: Partial<PageInteraction>) => void;
+  deleteInteraction: (id: string) => void;
+}
+
+/**
+ * 页面级卡片联动声明，由页面设计与工具栏保存，运行期由 InteractionBus 消费
+ */
+export const useInteractionStore = create<State & Action>()((set, get) => ({
+  interactions: [],
+  setInteractions: (interactions) => set({ interactions }),
+  addInteraction: (interaction) => set({ interactions: [...get().interactions, interaction] }),
+  updateInteraction: (id, patch) =>
+    set({
+      interactions: get().interactions.map((interaction) =>
+        interaction.id === id ? { ...interaction, ...patch } : interaction,
+      ),
+    }),
+  deleteInteraction: (id) =>
+    set({ interactions: get().interactions.filter((interaction) => interaction.id !== id) }),
+}));
+
+/**
+ * 解析配置中的取值表达式：`{eventData.region}` 取事件参数，`{data.search.x}` 取页面数据，
+ * 不含花括号时按字面量处理
+ */
+export function readExpression(expression: string | undefined, context: Record<string, any>) {
+  if (!expression) return undefined;
+
+  const single = expression.trim().match(/^\{([^{}]+)\}$/);
+  if (single) return getByPath(context, single[1].trim());
+  if (!expression.includes("{")) return expression;
+
+  return expression.replace(/\{([^{}]+)\}/g, (_, path: string) => {
+    const value = getByPath(context, path.trim());
+    if (value === undefined || value === null) return "";
+    return typeof value === "object" ? JSON.stringify(value) : String(value);
+  });
+}
+
+/** 联动链：已执行过的联动 id 与当前深度，用于防环 */
+interface EmitChain {
+  visited: Set<string>;
+  depth: number;
+}
+
+interface PendingEmit {
+  scopeId: string;
+  event: string;
+  payload: any;
+  chain: EmitChain;
+}
+
+const pendingEmits: PendingEmit[] = [];
+let flushScheduled = false;
+/** 当前正在执行的联动链，嵌套事件必须继承它 */
+let activeChain: EmitChain | null = null;
+
+/**
+ * 卡片契约事件上行入口：同一微任务内的多个事件合并执行
+ */
+export function emitCardEvent(scopeId: string | undefined, event: string, payload: any) {
+  if (!scopeId || !event) return;
+
+  pendingEmits.push({
+    scopeId,
+    event,
+    payload,
+    chain: activeChain ?? { visited: new Set(), depth: 0 },
+  });
+
+  if (flushScheduled) return;
+
+  flushScheduled = true;
+  queueMicrotask(flushInteractions);
+}
+
+function flushInteractions() {
+  flushScheduled = false;
+
+  while (pendingEmits.length) {
+    const item = pendingEmits.shift();
+    if (!item || item.chain.depth >= MAX_CHAIN_DEPTH) continue;
+    dispatchInteraction(item);
+  }
+}
+
+function dispatchInteraction({ scopeId, event, payload, chain }: PendingEmit) {
+  const { interactions } = useInteractionStore.getState();
+
+  interactions.forEach((interaction) => {
+    const { trigger } = interaction;
+    if (!interaction.enabled || trigger.type !== "card-event") return;
+    if (trigger.scopeId !== scopeId || trigger.event !== event) return;
+    // 同一条链重复命中同一联动时跳过，保证 A→B→A 不会无限循环
+    if (chain.visited.has(interaction.id)) return;
+
+    const nextChain: EmitChain = {
+      visited: new Set(chain.visited).add(interaction.id),
+      depth: chain.depth + 1,
+    };
+    const triggerValue = trigger.field ? getByPath(payload, trigger.field) : payload;
+    const context = {
+      eventData: payload,
+      initEventData: payload,
+      value: triggerValue,
+      data: usePageDataStore.getState().data,
+    };
+    const previousChain = activeChain;
+
+    // set-input 可能再次触发卡片事件，嵌套事件需要继承当前链
+    activeChain = nextChain;
+    try {
+      interaction.actions.forEach((action) => runInteractionAction(action, context, triggerValue));
+    } finally {
+      activeChain = previousChain;
+    }
+  });
+}
+
+function runInteractionAction(
+  action: InteractionAction,
+  context: Record<string, any>,
+  triggerValue: any,
+) {
+  if (action.type === "set-input") {
+    if (!action.targetScopeId || !action.key) return;
+    const value = readExpression(action.valueFrom, context) ?? triggerValue;
+    setCardInput(action.targetScopeId, action.key, value);
+    return;
+  }
+
+  if (action.type === "invoke") {
+    if (!action.targetScopeId || !action.method) return;
+    const args = readExpression(action.argsFrom, context) ?? triggerValue;
+    invokeCardMethod(action.targetScopeId, action.method, args);
+    return;
+  }
+
+  if (action.type === "set-variable") {
+    if (!action.name) return;
+    const value = readExpression(action.valueFrom, context) ?? triggerValue;
+    usePageDataStore.getState().setData(action.name, value);
+  }
+}
