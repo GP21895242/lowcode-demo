@@ -108,4 +108,6 @@ export interface LoadResult {
 export interface LoadContext {
   mode: "edit" | "preview";
   signal?: AbortSignal;
+  /** 取数上下文变量，由调用方按作用域注入 */
+  variables?: Record<string, any>;
 }

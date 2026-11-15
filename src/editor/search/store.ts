@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { setCardInput } from "../card-template/registry";
 import { useDataSourceRuntimeStore } from "../data-source/runtime";
 import { usePageDataStore } from "../stores/page-data";
 import { useVariablesStore } from "../stores/variable";
@@ -48,7 +49,12 @@ export const usePageSearchStore = create<State & Action>()((set, get) => ({
       void useDataSourceRuntimeStore.getState().search(sourceId, search);
     });
 
-    // 卡片目标需要卡片运行时，P2 接入后在此分发 inputValues
+    // 卡片目标由卡片运行时落到实例输入，不参与数据源合并
+    config.targets.forEach((target) => {
+      if (target.kind === "card") {
+        setCardInput(target.scopeId, target.inputKey, searchValues[target.variable]);
+      }
+    });
   },
   reset: () => {
     const config = get().config;

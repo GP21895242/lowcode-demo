@@ -1,7 +1,9 @@
 import { create } from "zustand";
 import { getByPath } from "@/lib/utils";
 import { useComponetsStore } from "@/editor/stores/components";
+import { usePageDataStore } from "@/editor/stores/page-data";
 import { executeDataSource } from "./engine";
+import { findScopedSource, getScopedRelations } from "./scope-sources";
 import { useDataSourceStore } from "./store";
 import type { DataSourceSelection, LoadParams, LoadResult } from "./types";
 
@@ -26,6 +28,8 @@ export interface DataSourceScopeOptions {
   scope?: string;
   mode?: DataSourceBindingMode;
   consumerId?: string;
+  /** 取数上下文变量，缺省使用页面数据 */
+  variables?: Record<string, any>;
 }
 
 interface State {
@@ -50,7 +54,11 @@ interface Action {
     sort?: LoadParams["sort"],
     options?: DataSourceScopeOptions,
   ) => Promise<void>;
-  select: (sourceId: string, selection: DataSourceSelection | null) => Promise<void>;
+  select: (
+    sourceId: string,
+    selection: DataSourceSelection | null,
+    options?: DataSourceScopeOptions,
+  ) => Promise<void>;
   retain: (sourceId: string, options?: DataSourceScopeOptions) => void;
   release: (sourceId: string, options?: DataSourceScopeOptions) => void;
   invalidate: (sourceId: string, options?: DataSourceScopeOptions) => void;
@@ -196,7 +204,10 @@ export const useDataSourceRuntimeStore = create<State & Action>()((set, get) => 
       return;
     }
 
-    const source = useDataSourceStore.getState().sources.find((item) => item.id === sourceId);
+    // 卡片私有源优先于同名页面源，避免实例间定义串用
+    const source =
+      findScopedSource(options?.scope, sourceId) ??
+      useDataSourceStore.getState().sources.find((item) => item.id === sourceId);
     if (!source) {
       patchEntry(entryKey, { loading: false, status: "error", error: "数据源不存在" });
       return;
@@ -217,6 +228,7 @@ export const useDataSourceRuntimeStore = create<State & Action>()((set, get) => 
     const promise = executeDataSource(source, params, {
       mode: useComponetsStore.getState().mode,
       signal: controller.signal,
+      variables: options?.variables ?? usePageDataStore.getState().data,
     }).then((result) => {
       cache.set(key, {
         entryKey,
@@ -317,18 +329,21 @@ export const useDataSourceRuntimeStore = create<State & Action>()((set, get) => 
       );
     },
 
-    select: async (sourceId, selection) => {
-      patchEntry(sourceId, { selection });
+    select: async (sourceId, selection, options) => {
+      const entryKey = resolveEntryKey(sourceId, options);
+      patchEntry(entryKey, { selection });
 
-      const { relations, sources } = useDataSourceStore.getState();
-      const linked = relations.filter(
+      // 卡片作用域只应用卡片内部关系，页面作用域只应用页面关系
+      const relationList =
+        options?.scope && options.scope !== "page"
+          ? getScopedRelations(options.scope)
+          : useDataSourceStore.getState().relations;
+      const linked = relationList.filter(
         (relation) => relation.enabled && relation.sourceId === sourceId,
       );
 
       for (const relation of linked) {
-        if (!sources.some((source) => source.id === relation.targetId)) continue;
-
-        const targetEntry = get().sources[relation.targetId];
+        const targetEntry = get().sources[resolveEntryKey(relation.targetId, options)];
         const filters = { ...(targetEntry?.params.filters ?? {}) };
         const key = relation.paramKey || relation.targetField;
         const value = selection
@@ -341,7 +356,7 @@ export const useDataSourceRuntimeStore = create<State & Action>()((set, get) => 
           filters[key] = value;
         }
 
-        await get().setFilters(relation.targetId, filters);
+        await get().setFilters(relation.targetId, filters, options);
       }
     },
 

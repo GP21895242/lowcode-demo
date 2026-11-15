@@ -18,7 +18,6 @@ import {
 } from "../../../components/ui/table";
 import { formatDate, getByPath } from "../../../lib/utils";
 import { useDataSource, useDataSourceFields } from "../../data-source/hooks";
-import { useDataSourceRuntimeStore } from "../../data-source/runtime";
 import type { DataSourceBinding } from "../../data-source/types";
 import type { CommonComponentProps } from "../../interface";
 
@@ -31,7 +30,15 @@ interface TableColumnConfig {
 
 function TableProd({ url, children, _execEventFlow, dataSource }: CommonComponentProps, ref: any) {
   const sourceId = (dataSource as DataSourceBinding | undefined)?.sourceId;
-  const { rows, loading, error, params } = useDataSource(sourceId);
+  const {
+    rows,
+    loading,
+    error,
+    params,
+    reload,
+    search: searchSource,
+    setSort,
+  } = useDataSource(sourceId);
   const fields = useDataSourceFields(sourceId);
 
   const [legacyData, setLegacyData] = useState<any[]>([]);
@@ -65,20 +72,20 @@ function TableProd({ url, children, _execEventFlow, dataSource }: CommonComponen
     () => ({
       search: (values: any) => {
         if (sourceId) {
-          void useDataSourceRuntimeStore.getState().search(sourceId, values ?? {});
+          searchSource(values ?? {});
           return;
         }
         setSearchParams(values ?? {});
       },
       reload: () => {
         if (sourceId) {
-          void useDataSourceRuntimeStore.getState().load(sourceId, { force: true });
+          reload();
           return;
         }
         void getLegacyData(searchParams);
       },
     }),
-    [sourceId, getLegacyData, searchParams],
+    [sourceId, getLegacyData, searchParams, searchSource, reload],
   );
 
   const columns = useMemo<TableColumnConfig[]>(() => {
@@ -123,7 +130,7 @@ function TableProd({ url, children, _execEventFlow, dataSource }: CommonComponen
           : undefined
         : { field: dataIndex, order: "asc" as const };
 
-    void useDataSourceRuntimeStore.getState().setSort(sourceId, next);
+    setSort(next);
   }
 
   function renderCell(row: any, column: TableColumnConfig) {

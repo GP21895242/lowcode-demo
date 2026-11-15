@@ -1,6 +1,5 @@
 import axios from "axios";
 import { getByPath } from "@/lib/utils";
-import { usePageDataStore } from "@/editor/stores/page-data";
 import type { DataSourceAdapter } from "../adapter";
 import type { DataSource, LoadContext, LoadParams, LoadResult } from "../types";
 
@@ -69,7 +68,7 @@ export const httpAdapter: DataSourceAdapter = {
       throw new Error(`数据源「${source.title}」未配置接口地址`);
     }
 
-    const variables = usePageDataStore.getState().data;
+    const variables = ctx.variables ?? {};
     const context = buildContext(params, variables);
     const query = buildRequestParams(source, params, context);
     const method = request.method || "GET";

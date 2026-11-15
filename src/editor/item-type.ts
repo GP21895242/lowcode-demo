@@ -13,6 +13,7 @@ export const ItemType = {
   Page: "Page",
   Box: "Box",
   Card: "Card",
+  CardInstance: "CardInstance",
   Tabs: "Tabs",
   TabPane: "TabPane",
 };

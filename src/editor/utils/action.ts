@@ -7,26 +7,46 @@ import type { Node } from "../layouts/flow-event/data";
 import { getComponentRef } from "../stores/component-ref";
 import { usePageDataStore } from "../stores/page-data";
 
-function getData(key: string) {
-  return usePageDataStore.getState().data[key];
+/**
+ * 事件流的数据域：页面事件流写页面数据，卡片内部事件流写卡片数据域
+ */
+export interface EventDomain {
+  getData: (key: string) => any;
+  getDataSnapshot: () => Record<string, any>;
+  setData: (key: string, value: any) => void;
+  getComponentRef: (componentId: number) => any;
 }
 
-function setData(key: string, value: any) {
-  usePageDataStore.getState().setData(key, value);
-}
+const pageEventDomain: EventDomain = {
+  getData: (key) => usePageDataStore.getState().data[key],
+  getDataSnapshot: () => usePageDataStore.getState().data,
+  setData: (key, value) => usePageDataStore.getState().setData(key, value),
+  getComponentRef,
+};
 
-export function execEventFlow(nodes: Node[] = [], eventData?: any, initEventData?: any) {
+export function execEventFlow(
+  nodes: Node[] = [],
+  eventData?: any,
+  initEventData?: any,
+  domain: EventDomain = pageEventDomain,
+) {
   if (!nodes.length) return;
 
   nodes.forEach(async (item: Node) => {
     // 判断是否是动作节点，如果是动作节点并且条件结果不为false，则执行动作
     if (item.type === "action" && item.conditionResult !== false) {
       // 根据不同动作类型执行不同动作
-      await eventHandleMap[item.config.type](item, item.config.config, eventData, initEventData);
+      await eventHandleMap[item.config.type](
+        item,
+        item.config.config,
+        eventData,
+        initEventData,
+        domain,
+      );
     } else if (item.type === "condition") {
       // 如果是条件节点，执行条件脚本，把结果注入到子节点conditionResult属性中
       const conditionResult = (item.config || []).reduce((prev: any, cur: any) => {
-        const result = execScript(cur.condition, eventData, initEventData);
+        const result = execScript(cur.condition, eventData, initEventData, domain);
         prev[cur.id] = result;
         return prev;
       }, {});
@@ -35,15 +55,21 @@ export function execEventFlow(nodes: Node[] = [], eventData?: any, initEventData
         c.conditionResult = !!conditionResult[c.conditionId];
       });
       // 递归执行子节点事件流
-      execEventFlow(item.children, null, initEventData);
+      execEventFlow(item.children, null, initEventData, domain);
     } else if (item.type === "event") {
       // 如果是事件节点，执行事件子节点事件流
-      execEventFlow(item.children, null, initEventData);
+      execEventFlow(item.children, null, initEventData, domain);
     }
   });
 }
 
-async function confirmHandle(item: any, actionConfig: any, _: any, initEventData: any) {
+async function confirmHandle(
+  item: any,
+  actionConfig: any,
+  _: any,
+  initEventData: any,
+  domain: EventDomain,
+) {
   const { text } = actionConfig || {};
   openConfirm({
     title: "提示",
@@ -52,18 +78,24 @@ async function confirmHandle(item: any, actionConfig: any, _: any, initEventData
     onOk: () => {
       // 执行成功后，执行后续成功success事件
       const nodes = item.children?.filter((o: any) => o.eventKey === "confirm");
-      execEventFlow(nodes, null, initEventData);
+      execEventFlow(nodes, null, initEventData, domain);
     },
     onCancel: () => {
       // 执行失败后，执行后续error事件
       const nodes = item.children?.filter((o: any) => o.eventKey === "cancel");
-      execEventFlow(nodes, null, initEventData);
+      execEventFlow(nodes, null, initEventData, domain);
     },
   });
 }
 
 // 请求数据
-async function requestHandle(item: any, actionConfig: any, eventData: any, initEventData: any) {
+async function requestHandle(
+  item: any,
+  actionConfig: any,
+  eventData: any,
+  initEventData: any,
+  domain: EventDomain,
+) {
   const { url, method, params = [], body = [] } = actionConfig || {};
 
   try {
@@ -74,7 +106,7 @@ async function requestHandle(item: any, actionConfig: any, eventData: any, initE
           {
             eventData,
             initEventData,
-            data: usePageDataStore.getState().data,
+            data: domain.getDataSnapshot(),
           },
           $2,
         );
@@ -85,7 +117,7 @@ async function requestHandle(item: any, actionConfig: any, eventData: any, initE
     let bodyValue;
 
     if (body && body.type === "script" && body.script) {
-      bodyValue = execScript(body.script, eventData, initEventData);
+      bodyValue = execScript(body.script, eventData, initEventData, domain);
     } else if (body && body.type === "json" && body.json) {
       bodyValue = JSON.parse(body.json);
     }
@@ -99,44 +131,56 @@ async function requestHandle(item: any, actionConfig: any, eventData: any, initE
 
     // 执行成功后，执行后续成功success事件
     const nodes = item.children?.filter((o: any) => o.eventKey === "success");
-    execEventFlow(nodes, res.data, initEventData);
+    execEventFlow(nodes, res.data, initEventData, domain);
   } catch (error) {
     console.log(error, "error");
 
     const nodes = item.children?.filter((o: any) => o.eventKey === "error");
-    execEventFlow(nodes);
+    execEventFlow(nodes, undefined, undefined, domain);
   } finally {
     const nodes = item.children?.filter((o: any) => o.eventKey === "finally");
-    execEventFlow(nodes);
+    execEventFlow(nodes, undefined, undefined, domain);
   }
 }
 
 // 执行脚本
-async function execScriptHandle(item: any, actionConfig: any, eventData: any, initEventData: any) {
+async function execScriptHandle(
+  item: any,
+  actionConfig: any,
+  eventData: any,
+  initEventData: any,
+  domain: EventDomain,
+) {
   const { script } = actionConfig || {};
 
   if (script) {
     try {
       // 执行脚本
-      execScript(script, eventData, initEventData);
+      execScript(script, eventData, initEventData, domain);
 
       // 执行成功后，执行后续成功success事件
       const nodes = item.children?.filter((o: any) => o.eventKey === "success");
-      execEventFlow(nodes);
+      execEventFlow(nodes, undefined, undefined, domain);
     } catch {
       // 执行失败后，执行后续error事件
       const nodes = item.children?.filter((o: any) => o.eventKey === "error");
-      execEventFlow(nodes);
+      execEventFlow(nodes, undefined, undefined, domain);
     } finally {
       // 执行后续成功或失败finally事件
       const nodes = item.children?.filter((o: any) => o.eventKey === "finally");
-      execEventFlow(nodes);
+      execEventFlow(nodes, undefined, undefined, domain);
     }
   }
 }
 
 // 设置变量
-async function setVariableHandle(item: any, actionConfig: any, eventData: any, initEventData: any) {
+async function setVariableHandle(
+  item: any,
+  actionConfig: any,
+  eventData: any,
+  initEventData: any,
+  domain: EventDomain,
+) {
   const { variable, value } = actionConfig || {};
 
   if (variable && value) {
@@ -147,28 +191,28 @@ async function setVariableHandle(item: any, actionConfig: any, eventData: any, i
             {
               eventData,
               initEventData,
-              data: usePageDataStore.getState().data,
+              data: domain.getDataSnapshot(),
             },
             $2,
           );
-          setData(variable, data);
+          domain.setData(variable, data);
         });
       } else {
         // 变量设置
-        setData(variable, value);
+        domain.setData(variable, value);
       }
 
       // 执行成功后，执行后续成功success事件
       const nodes = item.children?.filter((o: any) => o.eventKey === "success");
-      execEventFlow(nodes);
+      execEventFlow(nodes, undefined, undefined, domain);
     } catch {
       // 执行失败后，执行后续error事件
       const nodes = item.children?.filter((o: any) => o.eventKey === "error");
-      execEventFlow(nodes);
+      execEventFlow(nodes, undefined, undefined, domain);
     } finally {
       // 执行后续成功或失败finally事件
       const nodes = item.children?.filter((o: any) => o.eventKey === "finally");
-      execEventFlow(nodes);
+      execEventFlow(nodes, undefined, undefined, domain);
     }
   }
 }
@@ -179,31 +223,32 @@ async function componentMethodHandle(
   actionConfig: any,
   eventData: any,
   initEventData: any,
+  domain: EventDomain,
 ) {
   const { componentId, method } = actionConfig || {};
 
   if (componentId && actionConfig) {
     try {
-      // 执行组件方法
-      await getComponentRef(componentId)[method](eventData);
+      // 执行组件方法，卡片域只解析当前实例的内部 ref
+      await domain.getComponentRef(componentId)[method](eventData);
 
       // 执行成功后，执行后续成功success事件
       const nodes = item.children?.filter((o: any) => o.eventKey === "success");
-      execEventFlow(nodes, eventData, initEventData);
+      execEventFlow(nodes, eventData, initEventData, domain);
     } catch {
       // 执行失败后，执行后续error事件
       const nodes = item.children?.filter((o: any) => o.eventKey === "error");
-      execEventFlow(nodes, eventData, initEventData);
+      execEventFlow(nodes, eventData, initEventData, domain);
     } finally {
       // 执行后续成功或失败finally事件
       const nodes = item.children?.filter((o: any) => o.eventKey === "finally");
-      execEventFlow(nodes, eventData, initEventData);
+      execEventFlow(nodes, eventData, initEventData, domain);
     }
   }
 }
 
 // 显示提示
-function showMessageHandle(item: any, actionConfig: any) {
+function showMessageHandle(item: any, actionConfig: any, _: any, __: any, domain: EventDomain) {
   if (actionConfig?.type && actionConfig?.text) {
     try {
       if (actionConfig.type === "success") {
@@ -214,25 +259,31 @@ function showMessageHandle(item: any, actionConfig: any) {
 
       // 执行成功后，执行后续成功success事件
       const nodes = item.children?.filter((o: any) => o.eventKey === "success");
-      execEventFlow(nodes);
+      execEventFlow(nodes, undefined, undefined, domain);
     } catch {
       // 执行失败后，执行后续error事件
       const nodes = item.children?.filter((o: any) => o.eventKey === "error");
-      execEventFlow(nodes);
+      execEventFlow(nodes, undefined, undefined, domain);
     } finally {
       // 执行后续成功或失败finally事件
       const nodes = item.children?.filter((o: any) => o.eventKey === "finally");
-      execEventFlow(nodes);
+      execEventFlow(nodes, undefined, undefined, domain);
     }
   }
 }
 
 // 执行脚本
-function execScript(script: string, eventData: any, initEventData: any) {
+function execScript(script: string, eventData: any, initEventData: any, domain: EventDomain) {
   // eslint-disable-next-line no-implied-eval
   const func = new Function("ctx", `return ${script}`);
 
-  const ctx = { setData, getComponentRef, getData, eventData, initEventData };
+  const ctx = {
+    setData: domain.setData,
+    getComponentRef,
+    getData: domain.getData,
+    eventData,
+    initEventData,
+  };
   return func(ctx);
 }
 

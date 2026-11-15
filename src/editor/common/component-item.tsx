@@ -27,12 +27,15 @@ interface ComponentItemProps {
   onDragEnd: any;
   // 拖拽中回调
   onDragging?: () => void;
+  // 自定义插入属性，用于卡片模板等需要按条目生成属性的场景
+  buildProps?: () => any;
 }
 
 const iconMap: Record<string, LucideIcon> = {
   Box: Box,
   Button: MousePointerClick,
   Card: PanelTop,
+  CardInstance: LayoutPanelTop,
   Chart: ChartColumn,
   Form: LayoutTemplate,
   FormItem: TextCursorInput,
@@ -51,6 +54,7 @@ const ComponentItem: React.FC<ComponentItemProps> = ({
   description,
   onDragEnd,
   onDragging,
+  buildProps,
 }) => {
   const { componentConfig } = useComponentConfigStore();
 
@@ -64,13 +68,17 @@ const ComponentItem: React.FC<ComponentItemProps> = ({
 
         let props: any = {};
 
-        const defaultProps = componentConfig?.[name]?.defaultProps;
+        if (buildProps) {
+          props = buildProps();
+        } else {
+          const defaultProps = componentConfig?.[name]?.defaultProps;
 
-        if (defaultProps) {
-          if (typeof defaultProps === "function") {
-            props = defaultProps();
-          } else {
-            props = defaultProps || {};
+          if (defaultProps) {
+            if (typeof defaultProps === "function") {
+              props = defaultProps();
+            } else {
+              props = defaultProps || {};
+            }
           }
         }
 
@@ -86,7 +94,7 @@ const ComponentItem: React.FC<ComponentItemProps> = ({
         handlerId: monitor.getHandlerId(),
       }),
     }),
-    [name, componentConfig],
+    [name, componentConfig, buildProps],
   );
 
   useEffect(() => {
