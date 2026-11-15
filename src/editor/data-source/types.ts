@@ -63,6 +63,12 @@ export interface DataSource {
   request?: DataSourceRequest;
   fields: DataSourceField[];
   mock: DataSourceMock;
+  /** 是否进入合并建议候选池，仅用于建议，不代表会自动合并 */
+  shareable?: boolean;
+  /** 请求签名指纹，由字段推导，不参与导出 */
+  fingerprint?: string;
+  /** 合并留痕：本数据源吸收过的重复源 id */
+  mergedFrom?: string[];
 }
 
 export type DataSourceRelationType = "one-to-one" | "one-to-many" | "many-to-one";

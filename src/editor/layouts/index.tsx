@@ -10,6 +10,7 @@ import {
 } from "../../components/ui/resizable";
 import { Spinner } from "../../components/ui/spinner";
 import type { ComponentConfig } from "../interface";
+import MergeDialog from "../resource/merge-dialog";
 import { useComponentConfigStore } from "../stores/component-config";
 import { clearComponentRef } from "../stores/component-ref";
 import { useComponetsStore } from "../stores/components";
@@ -97,6 +98,7 @@ const Layout: React.FC<LayoutProps> = ({ pageId, pageName, view, fromEdit }) => 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
       <Toolbar pageId={pageId} pageName={pageName} view={view} fromEdit={fromEdit} />
+      <MergeDialog />
       {view === "edit" ? (
         <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1">
           <ResizablePanel defaultSize={240} maxSize={400} minSize={200}>

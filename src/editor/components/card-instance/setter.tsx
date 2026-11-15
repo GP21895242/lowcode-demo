@@ -1,5 +1,5 @@
 import { Settings, X } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Field } from "@/components/form";
 import { Button } from "@/components/ui/button";
@@ -13,10 +13,13 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import CardTemplateEditor from "../../card-template/editor";
-import { useCardTemplate } from "../../card-template/store";
+import { useCardTemplate, useCardTemplatesStore } from "../../card-template/store";
 import type { CardInputDef } from "../../card-template/types";
 import SelectVariableModal from "../../common/select-variable-modal";
 import { DataSourceSelect } from "../../data-source/components/data-source-select";
+import { useDataSourceStore } from "../../data-source/store";
+import { scanMerges } from "../../resource/scan";
+import { useSuggestionStore } from "../../resource/suggestion-store";
 import { useComponetsStore } from "../../stores/components";
 
 interface InputBindingValue {
@@ -134,8 +137,22 @@ function CardInputControl({
 /** 卡片实例设置器完全由模板 Contract 生成，页面无法读取或覆盖内部组件属性 */
 export default function CardInstanceSetter() {
   const curComponent = useComponetsStore((state) => state.curComponent);
+  const components = useComponetsStore((state) => state.components);
+  const sources = useDataSourceStore((state) => state.sources);
+  const templates = useCardTemplatesStore((state) => state.templates);
+  const dismissedIds = useSuggestionStore((state) => state.dismissedIds);
   const template = useCardTemplate(curComponent?.props?.templateId);
   const [editorOpen, setEditorOpen] = useState(false);
+
+  const pendingSuggestions = useMemo(() => {
+    if (!curComponent) return 0;
+
+    return scanMerges({ components, sources, templates }).filter(
+      (suggestion) =>
+        !dismissedIds.includes(suggestion.id) &&
+        suggestion.candidates.some((candidate) => candidate.componentId === curComponent.id),
+    ).length;
+  }, [components, curComponent, dismissedIds, sources, templates]);
 
   if (!curComponent || !template) {
     return <p className="py-3 text-xs text-muted-foreground">卡片模板不存在，无法生成配置面板</p>;
@@ -154,6 +171,12 @@ export default function CardInstanceSetter() {
           编辑契约
         </Button>
       </div>
+
+      {pendingSuggestions > 0 ? (
+        <p className="mb-3 rounded-md bg-muted/60 p-2 text-[11px] text-muted-foreground">
+          当前实例存在 {pendingSuggestions} 条优化建议，可在数据源面板查看，系统不会自动合并。
+        </p>
+      ) : null}
 
       {template.contract.inputs.map((input) => (
         <Field

@@ -7,6 +7,7 @@ import { useDataSourceStore } from "../editor/data-source/store";
 import Layout from "../editor/layouts";
 import { usePageSearchStore } from "../editor/search/store";
 import { useInteractionStore } from "../editor/interaction/runtime";
+import { useSuggestionStore } from "../editor/resource/suggestion-store";
 import { clearComponentRef } from "../editor/stores/component-ref";
 import { useComponetsStore } from "../editor/stores/components";
 import { usePageDataStore } from "../editor/stores/page-data";
@@ -43,6 +44,7 @@ export default function EditorPage({ pageId, view, fromEdit }: EditorPageProps) 
     useDataSourceStore.setState({ sources: design.sources, relations: design.relations });
     usePageSearchStore.getState().setConfig(design.search);
     useInteractionStore.getState().setInteractions(design.interactions ?? []);
+    useSuggestionStore.getState().setDismissedIds(design.dismissedSuggestions ?? []);
     clearComponentRef();
     queueMicrotask(() => {
       if (!cancelled) setReady(true);
@@ -54,6 +56,7 @@ export default function EditorPage({ pageId, view, fromEdit }: EditorPageProps) 
       usePageDataStore.getState().resetData();
       usePageSearchStore.getState().setConfig(null);
       useInteractionStore.getState().setInteractions([]);
+      useSuggestionStore.getState().setDismissedIds([]);
       clearComponentRef();
     };
   }, [pageId]);

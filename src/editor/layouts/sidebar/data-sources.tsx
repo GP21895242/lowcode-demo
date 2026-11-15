@@ -1,12 +1,16 @@
 import { Database, Pencil, Plus, Sparkles, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { DataSourceEditor } from "@/editor/layouts/data-source-editor";
-import { RelationEditor } from "@/editor/layouts/data-source-editor/relation-editor";
+import { useCardTemplatesStore } from "@/editor/card-template/store";
 import { createSamplePageData } from "@/editor/data-source/schema";
 import { useDataSourceStore } from "@/editor/data-source/store";
 import type { DataSource } from "@/editor/data-source/types";
+import { DataSourceEditor } from "@/editor/layouts/data-source-editor";
+import { RelationEditor } from "@/editor/layouts/data-source-editor/relation-editor";
+import { countSourceReferences, scanMerges } from "@/editor/resource/scan";
+import { useSuggestionStore } from "@/editor/resource/suggestion-store";
+import { useComponetsStore } from "@/editor/stores/components";
 
 const KIND_LABEL: Record<DataSource["kind"], string> = {
   http: "HTTP",
@@ -18,6 +22,19 @@ const DataSources: React.FC = () => {
   const addSource = useDataSourceStore((state) => state.addSource);
   const deleteSource = useDataSourceStore((state) => state.deleteSource);
   const setRelations = useDataSourceStore((state) => state.setRelations);
+  const components = useComponetsStore((state) => state.components);
+  const templates = useCardTemplatesStore((state) => state.templates);
+  const dismissedIds = useSuggestionStore((state) => state.dismissedIds);
+  const openDialog = useSuggestionStore((state) => state.openDialog);
+
+  const suggestionCount = useMemo(
+    () =>
+      scanMerges({ components, sources, templates }).filter(
+        (suggestion) => !dismissedIds.includes(suggestion.id),
+      ).length,
+    [components, dismissedIds, sources, templates],
+  );
+  const referenceCounts = useMemo(() => countSourceReferences(components), [components]);
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<DataSource | null>(null);
@@ -48,6 +65,12 @@ const DataSources: React.FC = () => {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="min-h-0 flex-1 overflow-auto p-2">
+        {suggestionCount > 0 ? (
+          <Button variant="outline" size="sm" className="mb-2 w-full" onClick={openDialog}>
+            <Sparkles className="size-3.5" />
+            优化建议（{suggestionCount}）
+          </Button>
+        ) : null}
         {sources.length === 0 ? (
           <div className="rounded-md border border-dashed border-border p-3 text-center">
             <Database className="mx-auto mb-2 size-5 text-muted-foreground" />
@@ -92,6 +115,7 @@ const DataSources: React.FC = () => {
                 <span className="rounded bg-muted px-1 py-0.5">{KIND_LABEL[source.kind]}</span>
                 <span>{source.fields.length} 字段</span>
                 <span>{source.mock.data.length} 行 Mock</span>
+                <span>引用 {referenceCounts[source.id] ?? 0}</span>
               </div>
             </div>
           ))

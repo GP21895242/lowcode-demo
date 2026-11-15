@@ -1,4 +1,9 @@
 import { create } from "zustand";
+
+import { useDataSourceStore } from "../data-source/store";
+import type { DataSource, DataSourceRelation } from "../data-source/types";
+import { usePageSearchStore } from "../search/store";
+import type { PageSearchConfig } from "../search/types";
 import { getComponentById } from "../utils/utils";
 
 /** 页面根组件 id */
@@ -71,6 +76,24 @@ const HISTORY_MERGE_INTERVAL = 400;
 let lastHistoryKey: string | null = null;
 let lastHistoryAt = 0;
 
+/** 页面级历史快照；仅跨域事务（如合并）记录数据源与搜索配置 */
+export interface HistorySnapshot {
+  components: Component[];
+  page?: {
+    sources?: DataSource[];
+    relations?: DataSourceRelation[];
+    search?: PageSearchConfig | null;
+  };
+}
+
+/** 合并事务：组件属性、数据源与搜索配置一次写入，只产生一条历史 */
+export interface MergeTransaction {
+  componentProps?: { componentId: number; props: any }[];
+  sources?: DataSource[];
+  relations?: DataSourceRelation[];
+  search?: PageSearchConfig | null;
+}
+
 interface State {
   components: Component[];
   curComponentId?: number | null;
@@ -79,10 +102,36 @@ interface State {
   editType: "page" | "event";
   /** 复制的组件（不持久化） */
   clipboard: Component | null;
-  /** 撤销栈，保存每次变更前的组件树快照 */
-  past: Component[][];
-  /** 重做栈，保存撤销后的组件树快照 */
-  future: Component[][];
+  /** 撤销栈，保存每次变更前的页面快照 */
+  past: HistorySnapshot[];
+  /** 重做栈，保存撤销后的页面快照 */
+  future: HistorySnapshot[];
+}
+
+function createComponentSnapshot(): HistorySnapshot {
+  return { components: structuredClone(useComponetsStore.getState().components) };
+}
+
+function snapshotPageState(): NonNullable<HistorySnapshot["page"]> {
+  const { sources, relations } = useDataSourceStore.getState();
+
+  return {
+    sources: structuredClone(sources),
+    relations: structuredClone(relations),
+    search: structuredClone(usePageSearchStore.getState().config),
+  };
+}
+
+function restorePageState(page: NonNullable<HistorySnapshot["page"]>) {
+  if (page.sources) {
+    useDataSourceStore.setState({ sources: structuredClone(page.sources) });
+  }
+  if (page.relations) {
+    useDataSourceStore.setState({ relations: structuredClone(page.relations) });
+  }
+  if (page.search !== undefined) {
+    usePageSearchStore.getState().setConfig(page.search ? structuredClone(page.search) : null);
+  }
 }
 
 /**
@@ -102,7 +151,7 @@ function createHistoryPatch(state: State, key: string): Pick<State, "past" | "fu
   }
 
   return {
-    past: [...state.past, structuredClone(state.components)].slice(-MAX_HISTORY),
+    past: [...state.past, { components: structuredClone(state.components) }].slice(-MAX_HISTORY),
     future: [],
   };
 }
@@ -194,6 +243,10 @@ interface Action {
    * 重做上一次撤销的组件变更
    */
   redo: () => void;
+  /**
+   * 以单条历史记录应用合并事务，组件与页面资源一次写入
+   */
+  applyMergeTransaction: (transaction: MergeTransaction) => void;
 }
 
 export const useComponetsStore = create<State & Action>()((set, get) => ({
@@ -405,16 +458,21 @@ export const useComponetsStore = create<State & Action>()((set, get) => ({
 
     if (!previous) return;
 
-    const curComponent = getComponentById(state.curComponentId ?? null, previous);
+    const curComponent = getComponentById(state.curComponentId ?? null, previous.components);
+    const futureSnapshot = createComponentSnapshot();
+    if (previous.page) futureSnapshot.page = snapshotPageState();
 
     lastHistoryKey = null;
     set({
-      components: previous,
+      components: previous.components,
       past: state.past.slice(0, -1),
-      future: [structuredClone(state.components), ...state.future].slice(0, MAX_HISTORY),
+      future: [futureSnapshot, ...state.future].slice(0, MAX_HISTORY),
       curComponentId: curComponent ? (state.curComponentId ?? null) : null,
       curComponent,
     });
+
+    // 仅跨域事务会携带页面资源快照，普通组件变更不触碰数据源
+    if (previous.page) restorePageState(previous.page);
   },
   redo: () => {
     const state = get();
@@ -422,15 +480,57 @@ export const useComponetsStore = create<State & Action>()((set, get) => ({
 
     if (!next) return;
 
-    const curComponent = getComponentById(state.curComponentId ?? null, next);
+    const curComponent = getComponentById(state.curComponentId ?? null, next.components);
+    const pastSnapshot = createComponentSnapshot();
+    if (next.page) pastSnapshot.page = snapshotPageState();
 
     lastHistoryKey = null;
     set({
-      components: next,
-      past: [...state.past, structuredClone(state.components)].slice(-MAX_HISTORY),
+      components: next.components,
+      past: [...state.past, pastSnapshot].slice(-MAX_HISTORY),
       future: state.future.slice(1),
       curComponentId: curComponent ? (state.curComponentId ?? null) : null,
       curComponent,
     });
+
+    if (next.page) restorePageState(next.page);
   },
+  applyMergeTransaction: (transaction) =>
+    set((state) => {
+      const history = {
+        past: [
+          ...state.past,
+          { components: structuredClone(state.components), page: snapshotPageState() },
+        ].slice(-MAX_HISTORY),
+        future: [],
+      };
+
+      (transaction.componentProps ?? []).forEach(({ componentId, props }) => {
+        const component = getComponentById(componentId, state.components);
+        if (component) {
+          component.props = { ...component.props, ...props };
+        }
+      });
+
+      if (transaction.sources) {
+        useDataSourceStore.setState({ sources: transaction.sources });
+      }
+      if (transaction.relations) {
+        useDataSourceStore.setState({ relations: transaction.relations });
+      }
+      if (transaction.search !== undefined) {
+        usePageSearchStore.getState().setConfig(transaction.search);
+      }
+
+      const curComponent = getComponentById(state.curComponentId ?? null, state.components);
+
+      // 合并事务独立成一条历史，避免与后续属性输入合并
+      lastHistoryKey = null;
+
+      return {
+        components: [...state.components],
+        curComponent,
+        ...history,
+      };
+    }),
 }));
