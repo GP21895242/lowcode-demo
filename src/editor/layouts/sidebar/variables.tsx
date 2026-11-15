@@ -28,6 +28,11 @@ const Variables: React.FC<VariablesProps> = ({ onEdit }) => {
                     搜索
                   </span>
                 ) : null}
+                {variable.readonly ? (
+                  <span className="shrink-0 rounded bg-muted px-1 py-0.5 text-[10px] text-muted-foreground">
+                    只读
+                  </span>
+                ) : null}
               </div>
               <p className="mt-1 truncate text-xs text-muted-foreground">
                 默认值：{variable.defaultValue || "-"}

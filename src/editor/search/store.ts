@@ -6,6 +6,7 @@ import { useVariablesStore } from "../stores/variable";
 import { groupSourceTargets, readSearchValues, toSearchDataKey } from "./targets";
 import type { PageSearchConfig } from "./types";
 import { syncSearchToUrl } from "./url-sync";
+import { syncSearchVariables } from "./variables";
 
 interface State {
   config: PageSearchConfig | null;
@@ -35,7 +36,11 @@ interface Action {
  */
 export const usePageSearchStore = create<State & Action>()((set, get) => ({
   config: null,
-  setConfig: (config) => set({ config: config ?? null }),
+  setConfig: (config) => {
+    set({ config: config ?? null });
+    // 搜索字段统一投影为只读搜索变量，保证变量面板与属性绑定可见
+    syncSearchVariables(config ?? null);
+  },
   setValue: (key, value) => {
     usePageDataStore.getState().setData(toSearchDataKey(key), value);
   },

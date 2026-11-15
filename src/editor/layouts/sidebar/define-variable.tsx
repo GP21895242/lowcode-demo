@@ -1,5 +1,5 @@
 import { Plus, Trash2 } from "lucide-react";
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 
 import { AppForm, Field, FieldArray, useAppForm } from "../../../components/form";
 import { Button } from "../../../components/ui/button";
@@ -47,16 +47,27 @@ const PERSIST_OPTIONS = [
 const DefineVariable: React.FC<Props> = ({ open, onCancel }) => {
   const { setVariables, variables } = useVariablesStore();
 
+  // 搜索变量由搜索区自动生成，面板内只读展示
+  const editableVariables = useMemo(
+    () => variables.filter((variable) => !variable.readonly && variable.scope !== "search"),
+    [variables],
+  );
+  const readonlyCount = variables.length - editableVariables.length;
+
   const form = useAppForm<{ variables: Variable[] }>({ variables: [] }, { onSubmit: onFinish });
 
   useEffect(() => {
     if (open) {
-      form.reset({ variables });
+      form.reset({ variables: editableVariables });
     }
-  }, [open, form, variables]);
+  }, [open, form, editableVariables]);
 
   function onFinish(values: { variables: Variable[] }) {
-    setVariables(values.variables || []);
+    // 只读搜索变量不参与编辑，保存时原样写回
+    const readonlyVariables = variables.filter(
+      (variable) => variable.readonly || variable.scope === "search",
+    );
+    setVariables([...readonlyVariables, ...(values.variables || [])]);
     onCancel?.();
   }
 
@@ -72,6 +83,11 @@ const DefineVariable: React.FC<Props> = ({ open, onCancel }) => {
           <DialogTitle>定义变量</DialogTitle>
         </DialogHeader>
         <AppForm form={form} className="max-h-[60vh] overflow-y-auto py-2">
+          {readonlyCount > 0 ? (
+            <p className="mb-2 rounded-md bg-muted/60 p-2 text-[11px] text-muted-foreground">
+              有 {readonlyCount} 个搜索变量由搜索区自动生成，此处只读，不参与编辑。
+            </p>
+          ) : null}
           <FieldArray name="variables">
             {({ fields, add, remove }) => (
               <>
