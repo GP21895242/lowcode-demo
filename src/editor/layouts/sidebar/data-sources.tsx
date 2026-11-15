@@ -8,7 +8,8 @@ import { useDataSourceStore } from "@/editor/data-source/store";
 import type { DataSource } from "@/editor/data-source/types";
 import { DataSourceEditor } from "@/editor/layouts/data-source-editor";
 import { RelationEditor } from "@/editor/layouts/data-source-editor/relation-editor";
-import { countSourceReferences, scanMerges } from "@/editor/resource/scan";
+import { countSourceReferences } from "@/editor/resource/scan";
+import { getMergeSuggestions } from "@/editor/resource/scan-cache";
 import { useSuggestionStore } from "@/editor/resource/suggestion-store";
 import { useComponetsStore } from "@/editor/stores/components";
 
@@ -29,7 +30,7 @@ const DataSources: React.FC = () => {
 
   const suggestionCount = useMemo(
     () =>
-      scanMerges({ components, sources, templates }).filter(
+      getMergeSuggestions({ components, sources, templates }).filter(
         (suggestion) => !dismissedIds.includes(suggestion.id),
       ).length,
     [components, dismissedIds, sources, templates],

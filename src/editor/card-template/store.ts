@@ -210,6 +210,7 @@ export const useCardTemplatesStore = create<State & Action>()(
           desc: input.desc,
           version: 1,
           contract: input.contract ?? emptyContract(),
+          contractHistory: { 1: structuredClone(input.contract ?? emptyContract()) },
           impl: {
             root: structuredClone(input.root),
             sources: structuredClone(input.sources ?? []),
@@ -227,10 +228,21 @@ export const useCardTemplatesStore = create<State & Action>()(
         set((state) => ({
           templates: state.templates.map((template) => {
             if (template.id !== id) return template;
+
             const versionChanged = "contract" in patch || "impl" in patch;
+            const contractHistory =
+              patch.contract === undefined
+                ? template.contractHistory
+                : // 保留旧版本契约，供实例升级时对比 diff
+                  {
+                    ...(template.contractHistory ?? {}),
+                    [template.version]: structuredClone(template.contract),
+                  };
+
             return {
               ...template,
               ...patch,
+              contractHistory,
               version: versionChanged ? template.version + 1 : template.version,
               updatedAt: new Date().toISOString(),
             };

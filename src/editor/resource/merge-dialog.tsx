@@ -25,7 +25,8 @@ import { usePageSearchStore } from "../search/store";
 import type { PageSearchConfig, SearchControl } from "../search/types";
 import { useComponetsStore } from "../stores/components";
 import { getComponentById } from "../utils/utils";
-import { fingerprintSource, scanMerges, type MergeSuggestion } from "./scan";
+import { fingerprintSource, type MergeSuggestion } from "./scan";
+import { getMergeSuggestions } from "./scan-cache";
 import { useSuggestionStore } from "./suggestion-store";
 
 function candidateKey(candidate: MergeSuggestion["candidates"][number]) {
@@ -110,7 +111,7 @@ export default function MergeDialog() {
 
   const suggestions = useMemo(
     () =>
-      scanMerges({ components, sources, templates }).filter(
+      getMergeSuggestions({ components, sources, templates }).filter(
         (suggestion) => !dismissedIds.includes(suggestion.id),
       ),
     [components, dismissedIds, sources, templates],

@@ -80,6 +80,8 @@ export interface CardTemplate {
   desc?: string;
   version: number;
   contract: CardContract;
+  /** 各版本的契约留档，用于升级时对比 diff */
+  contractHistory?: Record<number, CardContract>;
   impl: CardTemplateImpl;
   createdAt: string;
   updatedAt: string;

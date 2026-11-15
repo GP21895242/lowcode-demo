@@ -18,7 +18,7 @@ import type { CardInputDef } from "../../card-template/types";
 import SelectVariableModal from "../../common/select-variable-modal";
 import { DataSourceSelect } from "../../data-source/components/data-source-select";
 import { useDataSourceStore } from "../../data-source/store";
-import { scanMerges } from "../../resource/scan";
+import { getMergeSuggestions } from "../../resource/scan-cache";
 import { useSuggestionStore } from "../../resource/suggestion-store";
 import { useComponetsStore } from "../../stores/components";
 
@@ -147,7 +147,7 @@ export default function CardInstanceSetter() {
   const pendingSuggestions = useMemo(() => {
     if (!curComponent) return 0;
 
-    return scanMerges({ components, sources, templates }).filter(
+    return getMergeSuggestions({ components, sources, templates }).filter(
       (suggestion) =>
         !dismissedIds.includes(suggestion.id) &&
         suggestion.candidates.some((candidate) => candidate.componentId === curComponent.id),

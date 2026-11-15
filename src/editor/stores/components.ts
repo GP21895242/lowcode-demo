@@ -247,6 +247,10 @@ interface Action {
    * 以单条历史记录应用合并事务，组件与页面资源一次写入
    */
   applyMergeTransaction: (transaction: MergeTransaction) => void;
+  /**
+   * 批量更新组件属性，只产生一条组件历史（如卡片模板升级）
+   */
+  applyComponentPatches: (patches: { componentId: number; props: any }[]) => void;
 }
 
 export const useComponetsStore = create<State & Action>()((set, get) => ({
@@ -525,6 +529,35 @@ export const useComponetsStore = create<State & Action>()((set, get) => ({
       const curComponent = getComponentById(state.curComponentId ?? null, state.components);
 
       // 合并事务独立成一条历史，避免与后续属性输入合并
+      lastHistoryKey = null;
+
+      return {
+        components: [...state.components],
+        curComponent,
+        ...history,
+      };
+    }),
+  applyComponentPatches: (patches) =>
+    set((state) => {
+      if (!patches.length) return {};
+
+      const history = {
+        past: [...state.past, { components: structuredClone(state.components) }].slice(
+          -MAX_HISTORY,
+        ),
+        future: [],
+      };
+
+      patches.forEach(({ componentId, props }) => {
+        const component = getComponentById(componentId, state.components);
+        if (component) {
+          component.props = { ...component.props, ...props };
+        }
+      });
+
+      const curComponent = getComponentById(state.curComponentId ?? null, state.components);
+
+      // 升级独立成一条历史，避免与后续属性输入合并
       lastHistoryKey = null;
 
       return {

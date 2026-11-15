@@ -16,6 +16,8 @@ import { clearComponentRef } from "../stores/component-ref";
 import { useComponetsStore } from "../stores/components";
 import { usePageDataStore } from "../stores/page-data";
 import { useVariablesStore } from "../stores/variable";
+import { usePageSearchStore } from "../search/store";
+import { readSearchValuesFromUrl } from "../search/url-sync";
 import { getVariablesDefaultData } from "../utils/utils";
 import Setting from "./setting";
 import Sidebar from "./sidebar";
@@ -81,6 +83,25 @@ const Layout: React.FC<LayoutProps> = ({ pageId, pageName, view, fromEdit }) => 
       cancelled = true;
     };
   }, [mergeData, setComponentConfig]);
+
+  // 页面就绪或视图切换后，从 URL 恢复持久化搜索值并重新按 targets 分发
+  useEffect(() => {
+    if (loading) return;
+
+    const searchStore = usePageSearchStore.getState();
+    if (!searchStore.config) return;
+
+    const urlValues = readSearchValuesFromUrl(
+      searchStore.config,
+      useVariablesStore.getState().variables,
+    );
+    if (!urlValues) return;
+
+    Object.entries(urlValues).forEach(([variable, value]) => {
+      searchStore.setValue(variable, value);
+    });
+    searchStore.submit(urlValues);
+  }, [loading, view]);
 
   function onDragging() {
     editStageRef.current?.updateSelectedMaskPosition();

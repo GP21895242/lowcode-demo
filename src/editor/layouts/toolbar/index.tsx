@@ -1,13 +1,16 @@
-import { Pencil, Play, Save, Sparkles } from "lucide-react";
-import { useMemo } from "react";
+import { CircleArrowUp, Pencil, Play, Save, Sparkles, Waypoints } from "lucide-react";
+import { useMemo, useState } from "react";
 
 import AppHeader, { type AppBreadcrumbItem } from "../../../pages/app-header";
 import { Button } from "../../../components/ui/button";
 import { toast } from "../../../components/ui/toast";
 import { useCardTemplatesStore } from "../../card-template/store";
+import CardUpgradeDialog from "../../card-template/upgrade-dialog";
+import { scanUpgrades } from "../../card-template/upgrade";
 import { useDataSourceStore } from "../../data-source/store";
 import { useInteractionStore } from "../../interaction/runtime";
-import { scanMerges } from "../../resource/scan";
+import PageGraphDialog from "../../resource/graph-dialog";
+import { getMergeSuggestions } from "../../resource/scan-cache";
 import { useSuggestionStore } from "../../resource/suggestion-store";
 import { usePageSearchStore } from "../../search/store";
 import { useComponetsStore } from "../../stores/components";
@@ -26,14 +29,21 @@ const Toolbar: React.FC<ToolbarProps> = ({ pageId, pageName, view, fromEdit }) =
   const components = useComponetsStore((state) => state.components);
   const sources = useDataSourceStore((state) => state.sources);
   const templates = useCardTemplatesStore((state) => state.templates);
+  const interactions = useInteractionStore((state) => state.interactions);
   const dismissedIds = useSuggestionStore((state) => state.dismissedIds);
   const openSuggestions = useSuggestionStore((state) => state.openDialog);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [graphOpen, setGraphOpen] = useState(false);
   const suggestionCount = useMemo(
     () =>
-      scanMerges({ components, sources, templates }).filter(
+      getMergeSuggestions({ components, sources, templates }).filter(
         (suggestion) => !dismissedIds.includes(suggestion.id),
       ).length,
     [components, dismissedIds, sources, templates],
+  );
+  const upgradeCount = useMemo(
+    () => scanUpgrades({ components, templates, interactions }).length,
+    [components, interactions, templates],
   );
   const breadcrumbs: AppBreadcrumbItem[] =
     view === "edit"
@@ -67,34 +77,59 @@ const Toolbar: React.FC<ToolbarProps> = ({ pageId, pageName, view, fromEdit }) =
   }
 
   return (
-    <AppHeader
-      breadcrumbs={breadcrumbs}
-      actions={
-        view === "edit" ? (
-          <>
-            {suggestionCount > 0 ? (
-              <Button size="sm" variant="ghost" onClick={openSuggestions} title="优化建议">
-                <Sparkles />
-                建议 {suggestionCount}
+    <>
+      <AppHeader
+        breadcrumbs={breadcrumbs}
+        actions={
+          view === "edit" ? (
+            <>
+              {upgradeCount > 0 ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setUpgradeOpen(true)}
+                  title="模板升级"
+                >
+                  <CircleArrowUp />
+                  升级 {upgradeCount}
+                </Button>
+              ) : null}
+              {suggestionCount > 0 ? (
+                <Button size="sm" variant="ghost" onClick={openSuggestions} title="优化建议">
+                  <Sparkles />
+                  建议 {suggestionCount}
+                </Button>
+              ) : null}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setGraphOpen(true)}
+                title="页面连线图"
+                aria-label="页面连线图"
+              >
+                <Waypoints />
+                连线
               </Button>
-            ) : null}
-            <Button size="sm" variant="outline" onClick={handleSave}>
-              <Save />
-              保存
+              <Button size="sm" variant="outline" onClick={handleSave}>
+                <Save />
+                保存
+              </Button>
+              <Button size="sm" onClick={enterPreview}>
+                <Play />
+                预览
+              </Button>
+            </>
+          ) : (
+            <Button size="sm" variant="outline" onClick={() => (window.location.hash = editHref)}>
+              <Pencil />
+              编辑页面
             </Button>
-            <Button size="sm" onClick={enterPreview}>
-              <Play />
-              预览
-            </Button>
-          </>
-        ) : (
-          <Button size="sm" variant="outline" onClick={() => (window.location.hash = editHref)}>
-            <Pencil />
-            编辑页面
-          </Button>
-        )
-      }
-    />
+          )
+        }
+      />
+      <CardUpgradeDialog open={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
+      <PageGraphDialog open={graphOpen} onClose={() => setGraphOpen(false)} />
+    </>
   );
 };
 

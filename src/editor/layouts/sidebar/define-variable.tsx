@@ -39,6 +39,11 @@ const SCOPE_OPTIONS = [
   { label: "搜索变量", value: "search" },
 ];
 
+const PERSIST_OPTIONS = [
+  { label: "不持久化", value: "none" },
+  { label: "URL", value: "url" },
+];
+
 const DefineVariable: React.FC<Props> = ({ open, onCancel }) => {
   const { setVariables, variables } = useVariablesStore();
 
@@ -118,6 +123,26 @@ const DefineVariable: React.FC<Props> = ({ open, onCancel }) => {
                           </SelectTrigger>
                           <SelectContent>
                             {SCOPE_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </Field>
+                    <Field name={["variables", index, "persist"]} className="mb-2 w-[130px]">
+                      {({ value, onChange }) => (
+                        <Select
+                          value={value ?? "none"}
+                          items={PERSIST_OPTIONS}
+                          onValueChange={onChange}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="持久化" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PERSIST_OPTIONS.map((option) => (
                               <SelectItem key={option.value} value={option.value}>
                                 {option.label}
                               </SelectItem>

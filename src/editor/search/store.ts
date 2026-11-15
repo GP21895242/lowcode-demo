@@ -5,6 +5,7 @@ import { usePageDataStore } from "../stores/page-data";
 import { useVariablesStore } from "../stores/variable";
 import { groupSourceTargets, readSearchValues, toSearchDataKey } from "./targets";
 import type { PageSearchConfig } from "./types";
+import { syncSearchToUrl } from "./url-sync";
 
 interface State {
   config: PageSearchConfig | null;
@@ -44,6 +45,9 @@ export const usePageSearchStore = create<State & Action>()((set, get) => ({
 
     const searchValues = values ?? readSearchValues(config.fields);
     const groups = groupSourceTargets(config.targets, searchValues);
+
+    // 仅 persist = url 的搜索变量写入地址栏，刷新后可从 URL 恢复
+    syncSearchToUrl(config, useVariablesStore.getState().variables, searchValues);
 
     Object.entries(groups).forEach(([sourceId, search]) => {
       void useDataSourceRuntimeStore.getState().search(sourceId, search);
