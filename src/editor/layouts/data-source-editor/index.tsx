@@ -343,6 +343,7 @@ export function DataSourceEditor({ open, source, onClose }: Props) {
 
     const runtime = useDataSourceRuntimeStore.getState();
     if (runtime.sources[next.id]) {
+      runtime.invalidate(next.id);
       void runtime.load(next.id, { force: true });
     }
 

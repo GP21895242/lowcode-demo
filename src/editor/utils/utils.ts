@@ -1,4 +1,5 @@
 import React from "react";
+import { toSearchDataKey } from "../search/targets";
 import { useComponentConfigStore } from "../stores/component-config";
 import type { Component } from "../stores/components";
 import type { Variable } from "../stores/variable";
@@ -93,7 +94,9 @@ export async function loadRemoteComponent(url: string) {
  */
 export const getVariablesDefaultData = (variables: Variable[]) => {
   return variables.reduce<Record<string, any>>((prev, variable) => {
-    prev[variable.name] = variable.defaultValue;
+    // 搜索变量统一落在 search.<key>，与 SearchBus / 表达式层保持一致
+    const key = variable.scope === "search" ? toSearchDataKey(variable.name) : variable.name;
+    prev[key] = variable.defaultValue;
     return prev;
   }, {});
 };

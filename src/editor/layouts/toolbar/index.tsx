@@ -3,8 +3,9 @@ import AppHeader, { type AppBreadcrumbItem } from "../../../pages/app-header";
 import { Button } from "../../../components/ui/button";
 import { toast } from "../../../components/ui/toast";
 import { useDataSourceStore } from "../../data-source/store";
+import { usePageSearchStore } from "../../search/store";
 import { useComponetsStore } from "../../stores/components";
-import { usePagesStore } from "../../stores/pages";
+import { PAGE_SCHEMA_VERSION, usePagesStore } from "../../stores/pages";
 import { useVariablesStore } from "../../stores/variable";
 
 interface ToolbarProps {
@@ -32,11 +33,17 @@ const Toolbar: React.FC<ToolbarProps> = ({ pageId, pageName, view, fromEdit }) =
   function handleSave() {
     const { components } = useComponetsStore.getState();
     const { sources, relations } = useDataSourceStore.getState();
+    const currentPage = usePagesStore.getState().pages.find((item) => item.id === pageId);
+
     usePagesStore.getState().savePage(pageId, {
+      schemaVersion: PAGE_SCHEMA_VERSION,
       components,
       variables: useVariablesStore.getState().variables,
       sources,
       relations,
+      interactions: currentPage?.interactions ?? [],
+      search: usePageSearchStore.getState().config ?? currentPage?.search,
+      dismissedSuggestions: currentPage?.dismissedSuggestions ?? [],
     });
     toast.add({ title: "页面保存成功", type: "success" });
   }

@@ -18,23 +18,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../../components/ui/select";
-import { useVariablesStore } from "../../stores/variable";
+import { useVariablesStore, type Variable } from "../../stores/variable";
 
 interface Props {
   open: boolean;
   onCancel: () => void;
 }
 
-interface Variable {
-  // 变量名
-  name: string;
-  // 变量类型
-  type?: string;
-  // 默认值
-  defaultValue: string;
-  // 备注
-  remark: string;
-}
+const TYPE_OPTIONS = [
+  { label: "字符串", value: "string" },
+  { label: "数字", value: "number" },
+  { label: "布尔", value: "boolean" },
+  { label: "日期", value: "date" },
+  { label: "日期时间", value: "datetime" },
+  { label: "JSON", value: "json" },
+];
+
+const SCOPE_OPTIONS = [
+  { label: "页面变量", value: "page" },
+  { label: "搜索变量", value: "search" },
+];
 
 const DefineVariable: React.FC<Props> = ({ open, onCancel }) => {
   const { setVariables, variables } = useVariablesStore();
@@ -83,19 +86,42 @@ const DefineVariable: React.FC<Props> = ({ open, onCancel }) => {
                         />
                       )}
                     </Field>
-                    <Field name={["variables", index, "type"]} className="mb-2 w-[130px]">
+                    <Field name={["variables", index, "type"]} className="mb-2 w-[120px]">
                       {({ value, onChange }) => (
                         <Select
-                          disabled
-                          value={value}
-                          items={[{ label: "字符串", value: "string" }]}
+                          value={value ?? "string"}
+                          items={TYPE_OPTIONS}
                           onValueChange={onChange}
                         >
                           <SelectTrigger className="w-full">
                             <SelectValue placeholder="类型" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="string">字符串</SelectItem>
+                            {TYPE_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </Field>
+                    <Field name={["variables", index, "scope"]} className="mb-2 w-[120px]">
+                      {({ value, onChange }) => (
+                        <Select
+                          value={value ?? "page"}
+                          items={SCOPE_OPTIONS}
+                          onValueChange={onChange}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="作用域" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {SCOPE_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       )}
@@ -104,7 +130,7 @@ const DefineVariable: React.FC<Props> = ({ open, onCancel }) => {
                       {({ value, onChange }) => (
                         <Input
                           placeholder="默认值"
-                          value={value ?? ""}
+                          value={String(value ?? "")}
                           onChange={(event) => onChange(event.target.value)}
                         />
                       )}
@@ -132,7 +158,9 @@ const DefineVariable: React.FC<Props> = ({ open, onCancel }) => {
                 <Button
                   variant="outline"
                   className="mt-2 w-full border-dashed"
-                  onClick={() => add({ type: "string" })}
+                  onClick={() =>
+                    add({ type: "string", scope: "page", defaultValue: "", remark: "" })
+                  }
                 >
                   <Plus className="h-4 w-4" />
                   添加变量

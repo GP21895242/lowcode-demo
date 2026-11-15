@@ -13,6 +13,7 @@ import {
 import { useDataSourceStore } from "../../data-source/store";
 import { useDataSourceRuntimeStore } from "../../data-source/runtime";
 import type { DataSourceField } from "../../data-source/types";
+import { usePageSearchStore } from "../../search/store";
 import type { CommonComponentProps } from "../../interface";
 
 interface SearchItemInfo {
@@ -22,6 +23,8 @@ interface SearchItemInfo {
   sourceId?: string;
   dataKey?: string;
   type?: string;
+  /** 绑定的搜索变量，缺省时使用组件名 */
+  variable?: string;
 }
 
 // 编辑态 props 为 { type, value } 包装，预览态已被 formatProps 解包
@@ -46,6 +49,7 @@ function SearchFormProd({ children, onSearch, labelPosition }: CommonComponentPr
           sourceId,
           dataKey,
           type: unwrap(props.type),
+          variable: unwrap(props.variable),
         };
       }) ?? []
     );
@@ -56,16 +60,26 @@ function SearchFormProd({ children, onSearch, labelPosition }: CommonComponentPr
     {
       onSubmit: (values) => {
         const groups: Record<string, Record<string, any>> = {};
+        const searchBus = usePageSearchStore.getState();
 
         items.forEach((item) => {
+          // 搜索值统一写入 pageData.search.<key>，供 ${search.xxx} 表达式使用
+          searchBus.setValue(item.variable ?? item.name, values[item.name]);
+
           if (!item.sourceId) return;
           groups[item.sourceId] ??= {};
           groups[item.sourceId][item.dataKey ?? item.name] = values[item.name];
         });
 
-        Object.entries(groups).forEach(([sourceId, searchValues]) => {
-          void useDataSourceRuntimeStore.getState().search(sourceId, searchValues);
-        });
+        if (searchBus.config) {
+          // 有页面搜索配置时由 SearchBus 按 targets 分发
+          searchBus.submit();
+        } else {
+          // 未配置搜索区时保持原有按数据源分组的行为
+          Object.entries(groups).forEach(([sourceId, searchValues]) => {
+            void useDataSourceRuntimeStore.getState().search(sourceId, searchValues);
+          });
+        }
 
         onSearch?.(values);
       },

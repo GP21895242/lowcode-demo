@@ -21,8 +21,13 @@ const Variables: React.FC<VariablesProps> = ({ onEdit }) => {
               <div className="flex items-center justify-between gap-2">
                 <span className="truncate font-mono text-xs text-foreground">{variable.name}</span>
                 <span className="shrink-0 rounded bg-muted px-1 py-0.5 text-[10px] text-muted-foreground">
-                  string
+                  {variable.type}
                 </span>
+                {variable.scope === "search" ? (
+                  <span className="shrink-0 rounded bg-primary/10 px-1 py-0.5 text-[10px] text-primary">
+                    搜索
+                  </span>
+                ) : null}
               </div>
               <p className="mt-1 truncate text-xs text-muted-foreground">
                 默认值：{variable.defaultValue || "-"}
