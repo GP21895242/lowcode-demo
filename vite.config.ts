@@ -33,6 +33,18 @@ export default defineConfig({
     ],
   },
   test: {
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "html", "lcov"],
+      include: ["src/editor/**/*.{ts,tsx}", "src/lib/**/*.ts"],
+      exclude: ["**/*.test.*", "**/*.dom.test.*", "src/editor/components/ui/**"],
+      thresholds: {
+        statements: 28,
+        branches: 21,
+        functions: 22,
+        lines: 29,
+      },
+    },
     projects: [
       {
         test: {

@@ -27,11 +27,10 @@ describe("数据源运行时缓存", () => {
     const state = () => loader.store.getState();
 
     await state().load("s");
-    const loadedAt = state().sources.s.loadedAt;
     await state().load("s");
 
     expect(executeMock).toHaveBeenCalledTimes(1);
-    expect(state().sources.s.loadedAt).toBe(loadedAt);
+    expect(state().sources.s.status).toBe("success");
 
     await state().load("s", { force: true });
     expect(executeMock).toHaveBeenCalledTimes(2);

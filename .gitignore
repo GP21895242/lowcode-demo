@@ -27,4 +27,10 @@ dist-ssr
 .claude/
 .codex/
 .gemini/
+.trae/
 .trae-html-share-packages/
+
+# Test artifacts
+coverage/
+playwright-report/
+test-results/
