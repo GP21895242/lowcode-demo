@@ -30,6 +30,17 @@ const EditStage = (_: any, ref: any) => {
     }
   }, [components]);
 
+  // 自由布局网格拖拽/缩放过程中实时同步遮罩位置
+  useEffect(() => {
+    function syncMaskPosition() {
+      selectedMaskRef.current?.updatePosition();
+    }
+
+    window.addEventListener("editor:layout-change", syncMaskPosition);
+
+    return () => window.removeEventListener("editor:layout-change", syncMaskPosition);
+  }, []);
+
   useEffect(() => {
     function createMask(e: any) {
       // 获取当前点击的元素
@@ -143,7 +154,7 @@ const EditStage = (_: any, ref: any) => {
   }
 
   return (
-    <div className="h-[100%] stage">
+    <div className="stage flex min-h-0 flex-1 flex-col">
       <React.Suspense fallback="loading...">{renderComponents(components)}</React.Suspense>
       {curComponentId && (
         <SelectedMask

@@ -155,3 +155,15 @@
     pointer-events: none;
   }
 }
+
+/* 自由布局：网格项 hover 时显示拖拽把手（resize 把手由 react-grid-layout 自带样式控制） */
+.editor-grid-drag-handle {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
+.editor-grid-item:hover > .editor-grid-drag-handle {
+  opacity: 1;
+  pointer-events: auto;
+}

@@ -139,7 +139,8 @@ function buildSlotRefs(template: CardTemplate) {
 export function getExpandedTemplate(template?: CardTemplate): ExpandedTemplate | null {
   if (!template) return null;
 
-  const cacheKey = `${template.id}@${template.version}`;
+  // 版本号只在契约变化时自增，内部实现调整通过 updatedAt 触发重新展开
+  const cacheKey = `${template.id}@${template.version}@${template.updatedAt}`;
   const cached = expansionCache.get(cacheKey);
   if (cached) return cached;
 
@@ -163,7 +164,7 @@ export function getExpandedTemplate(template?: CardTemplate): ExpandedTemplate |
 }
 
 /**
- * 按 (templateId, version) 缓存展开结果，属性变化不会触发整树重建
+ * 按 (templateId, version, updatedAt) 缓存展开结果，属性变化或内部实现调整都会重建
  */
 export function useExpandedTemplate(template?: CardTemplate) {
   return useMemo(() => getExpandedTemplate(template), [template]);

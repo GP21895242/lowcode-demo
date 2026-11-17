@@ -20,6 +20,12 @@ export default function registerCardInstanceComponent(ctx: Context) {
     methods: [],
     order: 1.1,
     hiddenInMaterial: true,
-    allowDrag: [ItemType.Page, ItemType.Space, ItemType.Card, ItemType.TabPane],
+    allowDrag: [
+      ItemType.Page,
+      ItemType.Space,
+      ItemType.Card,
+      ItemType.TabPane,
+      ItemType.GridLayout,
+    ],
   });
 }

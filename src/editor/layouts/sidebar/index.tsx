@@ -19,16 +19,21 @@ const menus: { key: MenuKey; label: string; icon: typeof Blocks }[] = [
   { key: "interactions", label: "联动", icon: Workflow },
 ];
 
-const Sidebar: React.FC<{ onDragging?: () => void }> = ({ onDragging }) => {
+const Sidebar: React.FC<{ onDragging?: () => void; materialMode?: "page" | "card" }> = ({
+  onDragging,
+  materialMode = "page",
+}) => {
   const [activeKey, setActiveKey] = useState<MenuKey>("material");
   const [variableVisible, setVariableVisible] = useState(false);
 
-  const activeMenu = menus.find((menu) => menu.key === activeKey);
+  const visibleMenus =
+    materialMode === "card" ? menus.filter((menu) => menu.key !== "interactions") : menus;
+  const activeMenu = visibleMenus.find((menu) => menu.key === activeKey) ?? visibleMenus[0];
 
   return (
     <aside className="flex h-full min-h-0 bg-background">
       <nav className="flex w-14 shrink-0 flex-col items-center gap-1 border-r border-border py-2">
-        {menus.map((menu) => {
+        {visibleMenus.map((menu) => {
           const Icon = menu.icon;
           const active = menu.key === activeKey;
 
@@ -56,7 +61,7 @@ const Sidebar: React.FC<{ onDragging?: () => void }> = ({ onDragging }) => {
           <span className="text-xs font-medium">{activeMenu?.label}</span>
         </div>
         <div className="min-h-0 flex-1 overflow-auto">
-          {activeKey === "material" && <Material onDragging={onDragging} />}
+          {activeKey === "material" && <Material onDragging={onDragging} mode={materialMode} />}
           {activeKey === "outline" && <Outline />}
           {activeKey === "variables" && <Variables onEdit={() => setVariableVisible(true)} />}
           {activeKey === "dataSources" && <DataSources />}

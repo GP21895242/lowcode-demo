@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 
 import { AppForm, DatePicker, Field, useAppForm } from "../../../components/form";
 import { Button } from "../../../components/ui/button";
@@ -14,6 +14,8 @@ import { useDataSourceStore } from "../../data-source/store";
 import { useDataSourceRuntimeStore } from "../../data-source/runtime";
 import type { DataSourceField } from "../../data-source/types";
 import { usePageSearchStore } from "../../search/store";
+import { toSearchDataKey } from "../../search/targets";
+import { usePageDataStore } from "../../stores/page-data";
 import type { CommonComponentProps } from "../../interface";
 
 interface SearchItemInfo {
@@ -34,6 +36,7 @@ function unwrap(value: any) {
 
 function SearchFormProd({ children, onSearch, labelPosition }: CommonComponentProps) {
   const sources = useDataSourceStore((state) => state.sources);
+  const pageData = usePageDataStore((state) => state.data);
 
   const items = useMemo<SearchItemInfo[]>(() => {
     return (
@@ -85,6 +88,18 @@ function SearchFormProd({ children, onSearch, labelPosition }: CommonComponentPr
       },
     },
   );
+
+  // 搜索值统一存放在 pageData，URL 恢复、事件流写入等外部来源需要回填到表单
+  useEffect(() => {
+    const values = form.store.state.values as Record<string, any>;
+
+    items.forEach((item) => {
+      const value = (pageData as Record<string, any>)[toSearchDataKey(item.variable ?? item.name)];
+      if (value === undefined) return;
+      if (values[item.name] === value) return;
+      form.setFieldValue(item.name, value);
+    });
+  }, [form, items, pageData]);
 
   function getField(item: SearchItemInfo): DataSourceField | undefined {
     return sources
@@ -180,7 +195,13 @@ function SearchFormProd({ children, onSearch, labelPosition }: CommonComponentPr
             <Button
               variant="outline"
               onClick={() => {
+                const searchBus = usePageSearchStore.getState();
                 form.reset();
+                if (searchBus.config) {
+                  // 有页面搜索配置时按变量默认值回填、重新分发并清理地址栏参数
+                  searchBus.reset();
+                  return;
+                }
                 void form.handleSubmit();
               }}
             >

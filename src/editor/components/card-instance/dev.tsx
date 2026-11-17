@@ -10,6 +10,7 @@ import {
   CardTitle,
 } from "../../../components/ui/card";
 import CardTemplateEditor from "../../card-template/editor";
+import { openCardTemplateDesign } from "../../card-template/navigation";
 import { useCardTemplate } from "../../card-template/store";
 import type { CommonComponentProps } from "../../interface";
 import CardInstanceView from "./view";
@@ -34,7 +35,7 @@ export default function CardInstanceDev(props: CommonComponentProps) {
       <CardHeader className="relative">
         <CardTitle className="pr-8 text-sm">{template?.name ?? "未知卡片模板"}</CardTitle>
         <CardDescription>
-          卡片实例 · {scopeId ?? "未设置"} · v{template?.version ?? "-"} · 双击编辑契约
+          卡片实例 · {scopeId ?? "未设置"} · v{template?.version ?? "-"} · 双击编辑契约或设计模板
         </CardDescription>
         {template ? (
           <Button
@@ -66,6 +67,14 @@ export default function CardInstanceDev(props: CommonComponentProps) {
         open={editorOpen}
         templateId={templateId}
         onClose={() => setEditorOpen(false)}
+        onDesign={
+          template
+            ? () => {
+                setEditorOpen(false);
+                openCardTemplateDesign(template.id);
+              }
+            : undefined
+        }
       />
     </Card>
   );

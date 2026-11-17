@@ -23,6 +23,12 @@ export default (ctx: Context) => {
       },
     ],
     order: 4,
-    allowDrag: [ItemType.Page, ItemType.Space, ItemType.Card, ItemType.TabPane],
+    allowDrag: [
+      ItemType.Page,
+      ItemType.Space,
+      ItemType.Card,
+      ItemType.TabPane,
+      ItemType.GridLayout,
+    ],
   });
 };

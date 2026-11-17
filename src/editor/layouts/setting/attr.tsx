@@ -5,8 +5,17 @@ import { Input } from "../../../components/ui/input";
 import { Label } from "../../../components/ui/label";
 import CommonSetter from "../../common/common-setter";
 import SettingFormItemSwitch from "../../common/setting-form-item/switch";
+import {
+  GRID_ITEM_DEFAULT_H,
+  GRID_ITEM_DEFAULT_W,
+  normalizeGridLayout,
+  setGridItemSize,
+  unwrapStaticValue,
+} from "../../components/grid-layout/layout-utils";
+import { ItemType } from "../../item-type";
 import { useComponentConfigStore } from "../../stores/component-config";
 import { useComponetsStore } from "../../stores/components";
+import { getComponentById } from "../../utils/utils";
 
 function Row({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -20,7 +29,7 @@ function Row({ label, children }: { label: React.ReactNode; children: React.Reac
 }
 
 const ComponentAttr = () => {
-  const { curComponentId, curComponent, updateComponentProps, updateComponent } =
+  const { components, curComponentId, curComponent, updateComponentProps, updateComponent } =
     useComponetsStore();
   const { componentConfig } = useComponentConfigStore();
 
@@ -59,6 +68,31 @@ const ComponentAttr = () => {
 
   const setter = componentConfig[curComponent?.name]?.setter;
 
+  // 选中的组件位于自由布局中时，额外提供该网格项的宽高设置
+  const parentComponent = getComponentById(curComponent.parentId ?? null, components);
+  const isGridItem = parentComponent?.name === ItemType.GridLayout;
+  const gridCols = Math.max(
+    1,
+    Math.round(Number(unwrapStaticValue(parentComponent?.props?.cols, 12)) || 12),
+  );
+  const gridLayout = isGridItem
+    ? normalizeGridLayout(unwrapStaticValue(parentComponent?.props?.layout, []))
+    : [];
+  const gridItem = gridLayout.find((item) => item.i === String(curComponent.id)) ?? {
+    i: String(curComponent.id),
+    x: 0,
+    y: 0,
+    w: GRID_ITEM_DEFAULT_W,
+    h: GRID_ITEM_DEFAULT_H,
+  };
+
+  const handleGridItemSizeChange = (patch: { w?: number; h?: number }) => {
+    if (!parentComponent) return;
+
+    const next = setGridItemSize(gridLayout, String(curComponent.id), patch, gridCols);
+    updateComponentProps(parentComponent.id, { layout: { type: "static", value: next } });
+  };
+
   return (
     <AppForm form={form} onValuesChange={handleValuesChange} className="py-2">
       <Row label="组件id">
@@ -83,6 +117,33 @@ const ComponentAttr = () => {
           }}
         />
       </Row>
+      {isGridItem ? (
+        <>
+          <Row label="网格宽度(列)">
+            <Input
+              type="number"
+              min={1}
+              max={gridCols}
+              value={gridItem.w}
+              onChange={(event) => {
+                const value = Math.round(Number(event.target.value));
+                if (Number.isFinite(value) && value >= 1) handleGridItemSizeChange({ w: value });
+              }}
+            />
+          </Row>
+          <Row label="网格高度(行)">
+            <Input
+              type="number"
+              min={1}
+              value={gridItem.h}
+              onChange={(event) => {
+                const value = Math.round(Number(event.target.value));
+                if (Number.isFinite(value) && value >= 1) handleGridItemSizeChange({ h: value });
+              }}
+            />
+          </Row>
+        </>
+      ) : null}
       {setter &&
         (!Array.isArray(setter) ? (
           React.createElement(setter as any)

@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import CardTemplateEditor from "../../card-template/editor";
+import { openCardTemplateDesign } from "../../card-template/navigation";
 import { useCardTemplate, useCardTemplatesStore } from "../../card-template/store";
 import type { CardInputDef } from "../../card-template/types";
 import SelectVariableModal from "../../common/select-variable-modal";
@@ -216,6 +217,10 @@ export default function CardInstanceSetter() {
         open={editorOpen}
         templateId={template.id}
         onClose={() => setEditorOpen(false)}
+        onDesign={() => {
+          setEditorOpen(false);
+          openCardTemplateDesign(template.id);
+        }}
       />
     </div>
   );

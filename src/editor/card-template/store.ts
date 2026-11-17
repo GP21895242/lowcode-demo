@@ -3,7 +3,7 @@ import { createJSONStorage, persist } from "zustand/middleware";
 import { createSamplePageData } from "../data-source/schema";
 import type { DataSource, DataSourceRelation } from "../data-source/types";
 import { ItemType } from "../item-type";
-import type { Component } from "../stores/components";
+import { createComponentId, type Component } from "../stores/components";
 import { usePagesStore } from "../stores/pages";
 import type { Variable } from "../stores/variable";
 import type { CardContract, CardInstanceProps, CardTemplate } from "./types";
@@ -45,7 +45,7 @@ interface Action {
    */
   createTemplate: (input: CreateTemplateInput) => CardTemplate;
   /**
-   * 更新卡片模板；契约或实现变化时自增版本
+   * 更新卡片模板；契约变化时自增版本，内部实现变化只刷新更新时间
    */
   updateTemplate: (id: string, patch: UpdateTemplateInput) => void;
   /**
@@ -56,6 +56,27 @@ interface Action {
 
 function emptyContract(): CardContract {
   return { inputs: [], events: [], methods: [], slots: [] };
+}
+
+/** 新建模板的默认根节点：设计器只允许在卡片内部编排内容 */
+export function createCardTemplateRoot(): Component {
+  return {
+    id: createComponentId(),
+    name: ItemType.Card,
+    props: {
+      title: { type: "static", value: "卡片标题" },
+      description: { type: "static", value: "卡片描述" },
+    },
+    children: [],
+  };
+}
+
+/** 创建空白卡片模板，随后进入可视化设计器编排内部实现 */
+export function createBlankCardTemplate(name: string): CardTemplate {
+  return useCardTemplatesStore.getState().createTemplate({
+    name,
+    root: createCardTemplateRoot(),
+  });
 }
 
 /**
@@ -229,7 +250,8 @@ export const useCardTemplatesStore = create<State & Action>()(
           templates: state.templates.map((template) => {
             if (template.id !== id) return template;
 
-            const versionChanged = "contract" in patch || "impl" in patch;
+            // 契约是唯一兼容边界：仅契约变化才升版本，内部实现调整靠 updatedAt 让展开缓存失效
+            const versionChanged = "contract" in patch;
             const contractHistory =
               patch.contract === undefined
                 ? template.contractHistory

@@ -26,13 +26,15 @@ import ProdStage from "./stage/prod";
 import Toolbar from "./toolbar";
 
 interface LayoutProps {
-  pageId: string;
-  pageName: string;
+  pageId?: string;
+  pageName?: string;
   view: "edit" | "preview";
   fromEdit?: boolean;
+  /** 卡片模板设计模式：画布内容来自模板 impl，保存目标也是模板 */
+  cardTemplate?: { id: string; name: string; from?: string };
 }
 
-const Layout: React.FC<LayoutProps> = ({ pageId, pageName, view, fromEdit }) => {
+const Layout: React.FC<LayoutProps> = ({ pageId, pageName, view, fromEdit, cardTemplate }) => {
   const { past, future, undo, redo } = useComponetsStore();
   const { setComponentConfig } = useComponentConfigStore();
   const [loading, setLoading] = useState(true);
@@ -86,7 +88,7 @@ const Layout: React.FC<LayoutProps> = ({ pageId, pageName, view, fromEdit }) => 
 
   // 页面就绪或视图切换后，从 URL 恢复持久化搜索值并重新按 targets 分发
   useEffect(() => {
-    if (loading) return;
+    if (loading || cardTemplate) return;
 
     const searchStore = usePageSearchStore.getState();
     if (!searchStore.config) return;
@@ -101,7 +103,7 @@ const Layout: React.FC<LayoutProps> = ({ pageId, pageName, view, fromEdit }) => 
       searchStore.setValue(variable, value);
     });
     searchStore.submit(urlValues);
-  }, [loading, view]);
+  }, [cardTemplate, loading, view]);
 
   function onDragging() {
     editStageRef.current?.updateSelectedMaskPosition();
@@ -118,12 +120,18 @@ const Layout: React.FC<LayoutProps> = ({ pageId, pageName, view, fromEdit }) => 
 
   return (
     <div className="flex h-screen flex-col overflow-hidden">
-      <Toolbar pageId={pageId} pageName={pageName} view={view} fromEdit={fromEdit} />
-      <MergeDialog />
+      <Toolbar
+        pageId={pageId}
+        pageName={pageName ?? cardTemplate?.name}
+        view={view}
+        fromEdit={fromEdit}
+        cardTemplate={cardTemplate}
+      />
+      {cardTemplate ? null : <MergeDialog />}
       {view === "edit" ? (
         <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1">
           <ResizablePanel defaultSize={240} maxSize={400} minSize={200}>
-            <Sidebar onDragging={onDragging} />
+            <Sidebar onDragging={onDragging} materialMode={cardTemplate ? "card" : "page"} />
           </ResizablePanel>
           <ResizableHandle />
           <ResizablePanel className="min-w-0">
@@ -151,7 +159,7 @@ const Layout: React.FC<LayoutProps> = ({ pageId, pageName, view, fromEdit }) => 
                 </Button>
               </div>
               <div className="min-h-0 flex-1 overflow-auto bg-muted/40 p-4">
-                <div className="min-h-full rounded-lg border border-border bg-background shadow-sm">
+                <div className="flex min-h-full flex-col rounded-lg border border-border bg-background shadow-sm">
                   <EditStage ref={editStageRef} />
                 </div>
               </div>

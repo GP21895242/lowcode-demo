@@ -21,6 +21,8 @@ interface CardTemplateEditorProps {
   open: boolean;
   templateId?: string;
   onClose: () => void;
+  /** 进入可视化设计器编排模板内部实现 */
+  onDesign?: () => void;
 }
 
 function validateUnique(items: { key?: string; name?: string }[], label: string) {
@@ -30,7 +32,15 @@ function validateUnique(items: { key?: string; name?: string }[], label: string)
   return null;
 }
 
-function EditorForm({ template, onClose }: { template: CardTemplate; onClose: () => void }) {
+function EditorForm({
+  template,
+  onClose,
+  onDesign,
+}: {
+  template: CardTemplate;
+  onClose: () => void;
+  onDesign?: () => void;
+}) {
   const updateTemplate = useCardTemplatesStore((state) => state.updateTemplate);
   const [name, setName] = useState(template.name);
   const [desc, setDesc] = useState(template.desc ?? "");
@@ -94,6 +104,11 @@ function EditorForm({ template, onClose }: { template: CardTemplate; onClose: ()
         <ContractEditor template={template} value={contract} onChange={setContract} />
       </div>
       <SheetFooter className="shrink-0 flex-row justify-end border-t border-border">
+        {onDesign ? (
+          <Button variant="ghost" className="mr-auto" onClick={onDesign}>
+            可视化设计
+          </Button>
+        ) : null}
         <Button variant="outline" onClick={onClose}>
           取消
         </Button>
@@ -104,7 +119,12 @@ function EditorForm({ template, onClose }: { template: CardTemplate; onClose: ()
 }
 
 /** 卡片模板编辑器：维护模板信息与对外契约，修改不进入页面撤销栈 */
-export default function CardTemplateEditor({ open, templateId, onClose }: CardTemplateEditorProps) {
+export default function CardTemplateEditor({
+  open,
+  templateId,
+  onClose,
+  onDesign,
+}: CardTemplateEditorProps) {
   const template = useCardTemplate(open ? templateId : undefined);
 
   return (
@@ -127,6 +147,7 @@ export default function CardTemplateEditor({ open, templateId, onClose }: CardTe
             key={`${template.id}@${template.version}`}
             template={template}
             onClose={onClose}
+            onDesign={onDesign}
           />
         ) : (
           <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">

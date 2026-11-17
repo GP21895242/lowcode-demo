@@ -1,16 +1,31 @@
 import { useEffect, useState } from "react";
+import CardTemplateDesignPage from "./pages/card-template-design-page";
 import EditorPage from "./pages/editor-page";
 import PageList from "./pages/page-list";
 
 type Route =
   | { name: "list" }
   | { name: "edit"; pageId: string }
-  | { name: "preview"; pageId: string; fromEdit: boolean };
+  | { name: "preview"; pageId: string; fromEdit: boolean }
+  | { name: "cardTemplateDesign"; templateId: string; from?: string };
 
 function readRoute(): Route {
   const hash = window.location.hash.slice(1) || "/pages";
   const [path, query = ""] = hash.split("?");
   if (path === "/" || path === "/pages") return { name: "list" };
+
+  const templateMatch = path.match(/^\/card-templates\/([^/]+)\/design\/?$/);
+  if (templateMatch) {
+    try {
+      return {
+        name: "cardTemplateDesign",
+        templateId: decodeURIComponent(templateMatch[1]),
+        from: new URLSearchParams(query).get("from") ?? undefined,
+      };
+    } catch {
+      return { name: "list" };
+    }
+  }
 
   const match = path.match(/^\/pages\/([^/]+)(?:\/(edit|preview))?\/?$/);
   if (!match) return { name: "list" };
@@ -43,6 +58,15 @@ export default function App() {
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
 
+  if (route.name === "cardTemplateDesign") {
+    return (
+      <CardTemplateDesignPage
+        key={route.templateId}
+        templateId={route.templateId}
+        from={route.from}
+      />
+    );
+  }
   if (route.name === "edit") {
     return <EditorPage key={route.pageId} pageId={route.pageId} view="edit" />;
   }
