@@ -32,6 +32,25 @@ export default defineConfig({
       },
     ],
   },
+  test: {
+    projects: [
+      {
+        test: {
+          name: "unit",
+          environment: "node",
+          include: ["src/**/*.test.ts"],
+          exclude: ["src/**/*.dom.test.ts"],
+        },
+      },
+      {
+        test: {
+          name: "dom",
+          environment: "happy-dom",
+          include: ["src/**/*.test.tsx", "src/**/*.dom.test.ts"],
+        },
+      },
+    ],
+  },
   base: "./",
   resolve: {
     alias: {
