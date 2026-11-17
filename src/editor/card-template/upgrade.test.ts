@@ -48,14 +48,13 @@ function template(overrides: Partial<CardTemplate> = {}): CardTemplate {
   };
 }
 
-function instance(id: number, scopeId: string, props: Record<string, any> = {}) {
+function instance(id: number, props: Record<string, any> = {}) {
   return component({
     id,
     name: ItemType.CardInstance,
     props: {
       templateId: "tpl-upgrade",
       templateVersion: 1,
-      scopeId,
       inputValues: {},
       slotMapping: {},
       ...props,
@@ -81,14 +80,14 @@ describe("scanUpgrades", () => {
       {
         id: "i1",
         enabled: true,
-        trigger: { type: "card-event", scopeId: "scope-a", event: "save" },
+        trigger: { type: "card-event", componentId: 9, event: "save" },
         actions: [],
       },
     ];
 
     const candidates = scanUpgrades({
       components: [
-        instance(9, "scope-a", {
+        instance(9, {
           inputValues: { a: 1, b: 2 },
           slotMapping: { list: "s1", detail: "s2" },
         }),
@@ -115,7 +114,7 @@ describe("scanUpgrades", () => {
 
   it("实例未使用的删除项不进入破坏性提示", () => {
     const candidates = scanUpgrades({
-      components: [instance(10, "scope-b")],
+      components: [instance(10)],
       templates: [template()],
       interactions: [],
     });
@@ -126,7 +125,7 @@ describe("scanUpgrades", () => {
 
   it("版本已是最新时不产生升级候选", () => {
     const candidates = scanUpgrades({
-      components: [instance(11, "scope-c", { templateVersion: 2 })],
+      components: [instance(11, { templateVersion: 2 })],
       templates: [template()],
       interactions: [],
     });

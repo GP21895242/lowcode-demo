@@ -26,37 +26,41 @@ const ACTION_OPTIONS = [
 ];
 
 interface CardOption {
-  scopeId: string;
-  templateId: string;
+  componentId: number;
   template?: CardTemplate;
 }
 
-function collectCards(components: Component[], result: CardOption[] = []) {
+function collectCards(
+  components: Component[],
+  templates: CardTemplate[],
+  result: CardOption[] = [],
+) {
   components.forEach((component) => {
-    if (component.name === ItemType.CardInstance && component.props?.scopeId) {
+    if (component.name === ItemType.CardInstance) {
+      const templateId = String(component.props?.templateId ?? "");
       result.push({
-        scopeId: String(component.props.scopeId),
-        templateId: String(component.props.templateId ?? ""),
+        componentId: component.id,
+        template: templates.find((template) => template.id === templateId),
       });
     }
-    if (component.children?.length) collectCards(component.children, result);
+    if (component.children?.length) collectCards(component.children, templates, result);
   });
   return result;
 }
 
-function createInteraction(scopeId: string, event: string): PageInteraction {
+function createInteraction(componentId: number, event: string): PageInteraction {
   return {
     id: `interaction_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
     enabled: true,
-    trigger: { type: "card-event", scopeId, event },
+    trigger: { type: "card-event", componentId, event },
     actions: [],
   };
 }
 
 function createAction(type: InteractionAction["type"]): InteractionAction {
-  if (type === "invoke") return { type: "invoke", targetScopeId: "", method: "" };
+  if (type === "invoke") return { type: "invoke", targetComponentId: 0, method: "" };
   if (type === "set-variable") return { type: "set-variable", name: "", valueFrom: "{eventData}" };
-  return { type: "set-input", targetScopeId: "", key: "", valueFrom: "{eventData}" };
+  return { type: "set-input", targetComponentId: 0, key: "", valueFrom: "{eventData}" };
 }
 
 function PanelField({ label, children }: { label: string; children: ReactNode }) {
@@ -79,14 +83,11 @@ export default function InteractionSettingPanel() {
   const updateInteraction = useInteractionStore((state) => state.updateInteraction);
   const deleteInteraction = useInteractionStore((state) => state.deleteInteraction);
 
-  const cards = collectCards(components).map((card) => ({
-    ...card,
-    template: templates.find((template) => template.id === card.templateId),
-  }));
+  const cards = collectCards(components, templates);
 
   const cardOptions = cards.map((card) => ({
-    value: card.scopeId,
-    label: `${card.template?.name ?? "未知模板"} · ${card.scopeId}`,
+    value: String(card.componentId),
+    label: `${card.template?.name ?? "未知模板"} · #${card.componentId}`,
   }));
 
   if (!cards.length) {
@@ -97,8 +98,8 @@ export default function InteractionSettingPanel() {
     );
   }
 
-  function getTemplate(scopeId: string) {
-    return cards.find((card) => card.scopeId === scopeId)?.template;
+  function getTemplate(componentId: number) {
+    return cards.find((card) => card.componentId === componentId)?.template;
   }
 
   function updateTrigger(interaction: PageInteraction, patch: Partial<PageInteraction["trigger"]>) {
@@ -132,8 +133,8 @@ export default function InteractionSettingPanel() {
           size="sm"
           onClick={() => {
             const first = cards[0];
-            const event = getTemplate(first.scopeId)?.contract.events[0]?.name ?? "";
-            addInteraction(createInteraction(first.scopeId, event));
+            const event = getTemplate(first.componentId)?.contract.events[0]?.name ?? "";
+            addInteraction(createInteraction(first.componentId, event));
           }}
         >
           <Plus />
@@ -148,7 +149,7 @@ export default function InteractionSettingPanel() {
       ) : null}
 
       {interactions.map((interaction, interactionIndex) => {
-        const triggerTemplate = getTemplate(interaction.trigger.scopeId);
+        const triggerTemplate = getTemplate(interaction.trigger.componentId);
         const eventOptions = (triggerTemplate?.contract.events ?? []).map((event) => ({
           label: event.label || event.name,
           value: event.name,
@@ -180,13 +181,14 @@ export default function InteractionSettingPanel() {
             <div className="mt-2 space-y-2">
               <PanelField label="触发卡片">
                 <Select
-                  value={interaction.trigger.scopeId}
+                  value={String(interaction.trigger.componentId)}
                   items={cardOptions}
                   onValueChange={(next) => {
                     if (!next) return;
-                    const event = getTemplate(next)?.contract.events[0]?.name ?? "";
+                    const componentId = Number(next);
+                    const event = getTemplate(componentId)?.contract.events[0]?.name ?? "";
                     updateInteraction(interaction.id, {
-                      trigger: { ...interaction.trigger, scopeId: next, event },
+                      trigger: { ...interaction.trigger, componentId, event },
                     });
                   }}
                 >
@@ -260,8 +262,9 @@ export default function InteractionSettingPanel() {
               ) : null}
 
               {interaction.actions.map((action, actionIndex) => {
-                const targetScopeId = action.type === "set-variable" ? "" : action.targetScopeId;
-                const targetTemplate = getTemplate(targetScopeId);
+                const targetComponentId =
+                  action.type === "set-variable" ? 0 : action.targetComponentId;
+                const targetTemplate = getTemplate(targetComponentId);
                 const inputOptions = (targetTemplate?.contract.inputs ?? []).map((input) => ({
                   label: input.label || input.key,
                   value: input.key,
@@ -316,11 +319,13 @@ export default function InteractionSettingPanel() {
                     {action.type !== "set-variable" ? (
                       <PanelField label="目标卡片">
                         <Select
-                          value={action.targetScopeId}
+                          value={String(action.targetComponentId)}
                           items={cardOptions}
                           onValueChange={(next) => {
                             if (!next) return;
-                            patchAction(interaction, actionIndex, { targetScopeId: next });
+                            patchAction(interaction, actionIndex, {
+                              targetComponentId: Number(next),
+                            });
                           }}
                         >
                           <SelectTrigger className="w-full">

@@ -54,7 +54,6 @@ const GRAPH_WIDTH = 768;
 
 interface InstanceRef {
   componentId: number;
-  scopeId: string;
   templateId: string;
   slotMapping: Record<string, string>;
 }
@@ -64,11 +63,10 @@ function collectInstances(components: Component[]) {
 
   const walk = (nodes: Component[]) => {
     nodes.forEach((node) => {
-      if (node.name === ItemType.CardInstance && node.props?.scopeId) {
+      if (node.name === ItemType.CardInstance) {
         instances.push({
           componentId: node.id,
-          scopeId: String(node.props.scopeId),
-          templateId: String(node.props.templateId ?? ""),
+          templateId: String(node.props?.templateId ?? ""),
           slotMapping: (node.props.slotMapping ?? {}) as Record<string, string>,
         });
       }
@@ -103,10 +101,10 @@ export function buildPageGraph(input: {
     const template = templates.find((item) => item.id === instance.templateId);
 
     return {
-      id: `card:${instance.scopeId}`,
+      id: `card:${instance.componentId}`,
       kind: "card",
       label: template?.name ?? "未知模板",
-      sublabel: instance.scopeId,
+      sublabel: `#${instance.componentId}`,
       x: COLUMN_X.card,
       y: 0,
       width: COLUMN_WIDTH.card,
@@ -160,8 +158,8 @@ export function buildPageGraph(input: {
       if (!nodeMap.has(to)) return;
 
       edges.push({
-        id: `slot:${instance.scopeId}:${key}`,
-        from: `card:${instance.scopeId}`,
+        id: `slot:${instance.componentId}:${key}`,
+        from: `card:${instance.componentId}`,
         to,
         kind: "slot",
         label: key,
@@ -186,12 +184,14 @@ export function buildPageGraph(input: {
   });
 
   interactions.forEach((interaction) => {
-    const from = `card:${interaction.trigger.scopeId}`;
+    const from = `card:${interaction.trigger.componentId}`;
     if (!nodeMap.has(from)) return;
 
     interaction.actions.forEach((action, index) => {
       const to =
-        action.type === "set-variable" ? `variable:${action.name}` : `card:${action.targetScopeId}`;
+        action.type === "set-variable"
+          ? `variable:${action.name}`
+          : `card:${action.targetComponentId}`;
       if (!nodeMap.has(to)) return;
 
       edges.push({

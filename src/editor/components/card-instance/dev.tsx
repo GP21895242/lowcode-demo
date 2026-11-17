@@ -19,7 +19,7 @@ import CardInstanceView from "./view";
  * 卡片实例（编辑态）：整卡作为单个可选中节点，内部只读预览
  */
 export default function CardInstanceDev(props: CommonComponentProps) {
-  const { _id, templateId, scopeId, inputValues, slotMapping } = props;
+  const { _id, templateId, inputValues, slotMapping } = props;
   const template = useCardTemplate(templateId);
   const [editorOpen, setEditorOpen] = useState(false);
 
@@ -35,7 +35,7 @@ export default function CardInstanceDev(props: CommonComponentProps) {
       <CardHeader className="relative">
         <CardTitle className="pr-8 text-sm">{template?.name ?? "未知卡片模板"}</CardTitle>
         <CardDescription>
-          卡片实例 · {scopeId ?? "未设置"} · v{template?.version ?? "-"} · 双击编辑契约或设计模板
+          卡片实例 · #{_id} · v{template?.version ?? "-"} · 双击编辑契约或设计模板
         </CardDescription>
         {template ? (
           <Button
@@ -57,7 +57,7 @@ export default function CardInstanceDev(props: CommonComponentProps) {
       <CardContent className="pointer-events-none">
         <CardInstanceView
           templateId={templateId}
-          scopeId={scopeId}
+          componentId={_id}
           inputValues={inputValues}
           slotMapping={slotMapping}
           readonly

@@ -1,4 +1,6 @@
-import { usePageDataStore } from "../stores/page-data";
+import type { StoreApi } from "zustand/vanilla";
+
+import type { PageDataStore } from "../page-store/stores/page-data";
 import type { SearchFieldDef, SearchTarget } from "./types";
 
 const SEARCH_PREFIX = "search.";
@@ -20,8 +22,8 @@ export function toSearchDataKey(variable: string) {
 /**
  * 从页面数据读取当前搜索值
  */
-export function readSearchValues(fields: SearchFieldDef[]) {
-  const data = usePageDataStore.getState().data as Record<string, any>;
+export function readSearchValues(fields: SearchFieldDef[], pageData: StoreApi<PageDataStore>) {
+  const data = pageData.getState().data as Record<string, any>;
 
   return fields.reduce<Record<string, any>>((values, field) => {
     values[field.variable] = data[toSearchDataKey(field.variable)];

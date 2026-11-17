@@ -32,6 +32,8 @@
 
 ### 2.1 现有能力
 
+> 本节记录改造前的基线，仅用于说明起点；当前实现以第 3 节起的架构描述为准。
+
 | 模块         | 位置                                         | 现状                                                                                                                 |
 | ------------ | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | 页面模型     | `src/editor/stores/pages.ts`                 | `PageDesign = { components, variables, sources, relations }`，整页 localStorage 持久化（`lowcode-pages`，version 1） |
@@ -60,7 +62,7 @@
 ## 3. 总体架构
 
 ```
-页面设计态 PageDesign (schemaVersion: 2)
+页面设计态 PageDesign (schemaVersion: 4)
 ├─ components: Component[]                  ← 含 CardInstance 引用节点
 ├─ variables: Variable[]                    ← 含 scope: "search" 的搜索变量
 ├─ sources / relations
@@ -73,29 +75,45 @@
 └─ impl: { root, sources, variables, relations }  ← 内部实现，页面不可见
 
 页面运行时 PageRuntime
-├─ DataSourceRegistry    requestKey 缓存 + single-flight + 引用计数 + 失效
+├─ DataSourceLoader      requestKey 缓存 + single-flight + 引用计数 + 失效
 ├─ SearchBus             page-data 之上的门面
-└─ InteractionBus        emit(scopeId, event, payload) → actions
+└─ InteractionBus        emit(componentId, event, payload) → actions
 
 卡片运行时 CardRuntime（每个实例一个）
 ├─ 独立数据域 dataDomain
-├─ 内部数据源 scope = card:<scopeId>
+├─ 内部数据源：实例私有 DataSourceLoader（Context 注入）
 ├─ 内部事件流（闭环）
 └─ 契约桥：inputs 下行 / events 上行 / methods 句柄
 ```
 
 核心概念：
 
-| 概念                 | 职责                                             |
-| -------------------- | ------------------------------------------------ |
-| `CardTemplate`       | 可跨页面复用的卡片资产，包含契约与内部实现       |
-| `CardContract`       | 页面可配置的唯一入口                             |
-| `CardInstance`       | 页面中的引用节点，只存契约数据与 `scopeId`       |
-| `CardRuntime`        | 实例级隔离运行时（数据域、数据源作用域、事件桥） |
-| `DataSourceRegistry` | 页面级取数缓存与请求去重                         |
-| `SearchBus`          | 搜索值读写与目标分发                             |
-| `InteractionBus`     | 卡片事件到页面动作的编排                         |
-| `MergeSuggestion`    | 只读分析产出的合并建议                           |
+| 概念               | 职责                                                      |
+| ------------------ | --------------------------------------------------------- |
+| `CardTemplate`     | 可跨页面复用的卡片资产，包含契约与内部实现                |
+| `CardContract`     | 页面可配置的唯一入口                                      |
+| `CardInstance`     | 页面中的引用节点，只存契约数据，实例标识即 `Component.id` |
+| `CardRuntime`      | 实例级隔离运行时（数据域、数据源作用域、事件桥）          |
+| `DataSourceLoader` | 页面级或实例级取数缓存与请求去重                          |
+| `SearchBus`        | 搜索值读写与目标分发                                      |
+| `InteractionBus`   | 卡片事件到页面动作的编排                                  |
+| `MergeSuggestion`  | 只读分析产出的合并建议                                    |
+
+### 3.1 页面级 store 分层与预览隔离
+
+页面 store 不再是模块级单例，而是由 `PageProvider` 按页面实例创建、经 Context 下发：
+
+| 分组               | 包含                                                                                                                 | 创建时机             |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| `PageStores`       | `content` / `pageData` / `variables` / `dataSources` / `sourceLoader` / `search` / `interactions` / `refs` / `cards` | 编辑与预览都创建     |
+| `DesignPageStores` | `editor`（选中、历史、剪贴板）/ `suggestions`（合并建议缓存）                                                        | 仅 `view === "edit"` |
+
+约定：
+
+- 预览模式不创建设计态 store，`useDesignStores()` / `getActiveDesignStores()` 会直接抛错，任何误用立即暴露。
+- React 组件统一通过 `useContentStore / usePageDataStore / useEditorStore` 等 Context hook 取数；只有事件流、保存、注册表等非 React 入口才读取 `getActivePageStores()`。
+- 被编辑态与预览态共用的渲染组件（如 `grid-layout/base.tsx`）**不得依赖任何页面 store**，所需数据由 `dev.tsx` / `prod.tsx` 通过 props 注入（布局变更走 `onLayoutChange` 回调）。
+- 页面切换或卸载时调用 `sourceLoader.dispose()` 释放缓存与在途请求，避免页面之间串数据。
 
 ## 4. 卡片模板与独立 Runtime
 
@@ -181,7 +199,6 @@ interface CardSlotDef {
 interface CardInstanceProps {
   templateId: string;
   templateVersion: number; // 创建时版本，用于提示升级
-  scopeId: string; // 插入时生成，永久稳定，联动/事件/方法均引用它
   inputValues: Record<string, any>; // 仅允许 contract.inputs 的 key
   slotMapping: Record<string, string>; // 仅允许 contract.slots 的 key → 页面 sourceId
   // 事件绑定沿用现有 props[eventName] = { children: Node[] } 机制
@@ -189,17 +206,20 @@ interface CardInstanceProps {
 ```
 
 实例**不包含**任何指向内部组件节点的引用（没有 `overrides`），页面无法触及内部实现。
+实例的稳定标识即页面组件树节点的 `Component.id`（number），联动、事件、方法、搜索目标均引用它，不再单独生成 `scopeId / instanceId` 字段。
+
+> schema v4 起删除 `props.instanceId`；v3 及更早数据在迁移时把旧 `instanceId/scopeId` 映射到所在节点的 `Component.id` 后移除，映射不到的联动/搜索目标直接丢弃。
 
 ### 4.4 渲染结构与隔离
 
 ```tsx
 <CardErrorBoundary>
   <CardRuntimeProvider
-    scopeId={props.scopeId}
+    componentId={node.id}
     contract={template.contract}
     inputs={props.inputValues}
     slotMapping={props.slotMapping}
-    onEmit={(event, payload) => pageBus.emit(props.scopeId, event, payload)}
+    onEmit={(event, payload) => pageBus.emit(node.id, event, payload)}
   >
     <CardInternalRenderer impl={template.impl} />
   </CardRuntimeProvider>
@@ -208,19 +228,19 @@ interface CardInstanceProps {
 
 隔离维度：
 
-| 资源        | 隔离方式                                                                                                                   |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------- |
-| 内部变量    | `CardRuntime` 内的 `dataDomain`（键如 `card:${scopeId}:xxx`），与页面 `usePageDataStore` 分离；`$props.xxx` 由 inputs 注入 |
-| 内部数据源  | Registry 作用域 `card:${scopeId}`，实例挂载时注册、卸载时注销；不同实例互不影响                                            |
-| 内部组件 id | 运行时 `idMap` 分配，仅在卡片内有效；页面事件流组件选择器不可见                                                            |
-| 内部事件    | 默认在卡片内闭环；命中 `contract.events` 才 `emit` 到页面总线                                                              |
-| 组件 ref    | 页面只拿到一个句柄：`{ ...contract.methods, setInput, reload }`，注册到实例 id                                             |
-| 异常        | `CardErrorBoundary` 只影响卡片占位区域，不拖垮整页                                                                         |
+| 资源        | 隔离方式                                                                                                               |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------- |
+| 内部变量    | `CardRuntime` 内的 `dataDomain`（React state），与页面 `pageData` 分离；`$props.xxx` 由 inputs 注入                    |
+| 内部数据源  | 实例私有 `DataSourceLoader` 经 Context 下发，挂载时注册、卸载时 `dispose`；不同实例互不影响                            |
+| 内部组件 id | 运行时 `idMap` 分配，仅在卡片内有效；页面事件流组件选择器不可见                                                        |
+| 内部事件    | 默认在卡片内闭环；命中 `contract.events` 才 `emit` 到页面总线                                                          |
+| 组件 ref    | 页面只拿到一个句柄：`{ componentId, ...contract.methods, setInput, getInputs, reload, invoke }`，注册到 `CardRegistry` |
+| 异常        | `CardErrorBoundary` 只影响卡片占位区域，不拖垮整页                                                                     |
 
 必要的底层改造：
 
-- `LoadContext` 增加 `variables`（由调用方按作用域注入），`http` 适配器不再直接读 `usePageDataStore`。
-- `execEventFlow` 增加可选 `domain` 参数，卡片内部事件流写入卡片数据域，页面事件流仍写页面数据域。
+- `DataSourceLoader` 支持 `setVariableResolver`，取数变量由调用方按作用域注入，`http` 适配器不再直接读页面 store。
+- `execEventFlow` 接受 `EventDomain`，卡片内部事件流读写卡片数据域，页面事件流仍写页面数据域。
 
 ### 4.5 展开器与 id 映射
 
@@ -254,8 +274,8 @@ interface CardInstanceProps {
 | ----------- | ------------------------------------- | ------------------------------- |
 | 页面 → 卡片 | `inputValues`（含变量绑定、搜索变量） | 仅 `contract.inputs` 声明的 key |
 | 页面 → 卡片 | `slotMapping` → 页面数据源            | 仅 `contract.slots` 声明的 key  |
-| 页面 → 卡片 | `invoke(scopeId, method, args)`       | 仅 `contract.methods`           |
-| 卡片 → 页面 | `emit(scopeId, event, payload)`       | 仅 `contract.events`            |
+| 页面 → 卡片 | `invoke(componentId, method, args)`   | 仅 `contract.methods`           |
+| 卡片 → 页面 | `emit(componentId, event, payload)`   | 仅 `contract.events`            |
 
 禁止事项（由类型与运行时双重约束）：
 
@@ -282,7 +302,7 @@ interface PageInteraction {
   enabled: boolean;
   trigger: {
     type: "card-event";
-    scopeId: string;
+    componentId: number; // 卡片实例所在页面的 Component.id
     event: string; // 必须是 contract.events 中的事件
     field?: string; // 取 payload 中的字段
   };
@@ -290,8 +310,8 @@ interface PageInteraction {
 }
 
 type InteractionAction =
-  | { type: "set-input"; targetScopeId: string; key: string; valueFrom: string }
-  | { type: "invoke"; targetScopeId: string; method: string; argsFrom?: any }
+  | { type: "set-input"; targetComponentId: number; key: string; valueFrom: string }
+  | { type: "invoke"; targetComponentId: number; method: string; argsFrom?: any }
   | { type: "set-variable"; name: string; valueFrom: string };
 ```
 
@@ -305,12 +325,12 @@ type InteractionAction =
 ### 7.1 两层模型
 
 ```
-DataSourceRegistry（页面级）
+DataSourceLoader（页面级；每个卡片实例再各持一个）
   requestKey = sourceId + hash(params)
   cache:    Map<requestKey, { rows, total, loadedAt }>
   inFlight: Map<requestKey, Promise<LoadResult>>   // single-flight
   refCount: Map<requestKey, number>                // 归零可回收
-  scope:    "page" | `card:${scopeId}`             // 卡片私有源使用后一种
+  definitions: 页面数据源 / 模板私有数据源，由创建方注入
 
 Binding（消费者级）
   { consumerId, sourceId, mode: "shared" | "isolated" }
@@ -331,7 +351,7 @@ requestKey =
 | `sort` / `page`    | 消费者私有 | 排序翻页不应影响其他卡片；静态/Mock 可在缓存基础上本地处理 |
 | 联动产生的临时过滤 | 共享       | 参与 requestKey，保证联动后正确刷新                        |
 
-### 7.3 Registry 行为
+### 7.3 Loader 行为
 
 - `load`：命中 in-flight 直接复用 Promise；命中未过期缓存直接返回；否则发请求。
 - `search / setFilters`：**merge 语义**（`{ ...prev, ...next }`），并提供显式 `clear`。
@@ -339,7 +359,7 @@ requestKey =
 - 订阅粒度：hook 只订阅自身 `requestKey` 的 entry，避免一源刷新导致全页重渲染。
 - 缓存设 `staleTime` 与 LRU 上限。
 
-> 卡片私有数据源只在 `card:<scopeId>` 作用域内复用，跨实例不共享。需要跨卡片复用时，必须通过模板 slot 提升为页面级数据源，这是封装语义的代价，也是正确性要求。
+> 卡片私有数据源只在各自实例的 Loader 内复用，跨实例不共享。需要跨卡片复用时，必须通过模板 slot 提升为页面级数据源，这是封装语义的代价，也是正确性要求。
 
 ## 8. 全局搜索与变量整合
 
@@ -368,7 +388,7 @@ interface Variable {
 
 ```
 SearchBus.setValue(key, value) → pageData.setData(`search.${key}`, value)
-SearchBus.submit()             → 按 targets 组装参数 → Registry.load(...)
+SearchBus.submit()             → 按 targets 组装参数 → Loader.load(...)
 SearchBus.reset()              → 用 defaultValue 回填
 ```
 
@@ -379,7 +399,7 @@ SearchBus.reset()              → 用 defaultValue 回填
 ```ts
 type SearchTarget =
   | { kind: "source"; sourceId: string; paramKey: string; variable: string }
-  | { kind: "card"; scopeId: string; inputKey: string; variable: string };
+  | { kind: "card"; componentId: number; inputKey: string; variable: string };
 
 interface PageSearchConfig {
   scope: "page" | "group";
@@ -397,8 +417,8 @@ interface PageSearchConfig {
 }
 ```
 
-- 页面级：`targets` 中 `scopeId` 缺省表示所有绑定该源的卡片。
-- 卡片级：卡片内搜索区默认 `scope = card(scopeId)`，只影响本卡片；勾选“同步到页面”升级为 `page`。
+- 页面级：`kind: "source"` 的目标不指定实例，作用于所有绑定该源的卡片；`kind: "card"` 的目标显式指定 `componentId`。
+- 卡片级：卡片内搜索区默认 `scope = card(componentId)`，只影响本卡片；勾选“同步到页面”升级为 `page`。
 - 分组级：`group:<id>` 用于少量卡片共享，避免影响全页。
 - 取值优先级：`page → group → card`，同 key 后者覆盖前者。
 
@@ -415,7 +435,7 @@ interface PageSearchConfig {
 - 自动删除私有源副本
 - 自动生成全局搜索区或隐藏卡片内搜索控件
 
-> 注意区分：运行期“同源同参只发一次请求”是缓存去重，不是合并。Registry 的 single-flight 自动生效；合并只针对设计态定义收敛。
+> 注意区分：运行期“同源同参只发一次请求”是缓存去重，不是合并。Loader 的 single-flight 自动生效；合并只针对设计态定义收敛。
 
 ### 9.2 建议模型
 
@@ -491,7 +511,7 @@ fingerprint = hash(method + normalize(url) + sortedParamKeys + sortedHeaderKeys 
 
 ```ts
 interface PageDesign {
-  schemaVersion: 2;
+  schemaVersion: 4;
   components: Component[];
   variables: Variable[]; // v2：带 type / scope
   sources: DataSource[];
@@ -511,7 +531,9 @@ interface DataSource {
 
 迁移要求：
 
-- `pages` persist 升到 `version: 2` 并实现 `migrate`，补齐新字段默认值。
+- `pages` persist 升到 `version: 4` 并实现 `migrate`，按 v1 → v2 → v3 → v4 链路逐级补齐。
+- v2 → v3：卡片实例标识 `scopeId` 更名为 `instanceId`（中间版本，不再出现在当前结构中）。
+- v3 → v4：删除 `props.instanceId`，实例标识统一使用 `Component.id`；`interactions` 的 `trigger / actions` 与 `search.targets` 中的旧字符串标识按映射改写为 `componentId`，映射不到触发源或目标实例的条目被丢弃。
 - 旧 `Variable` 的 `defaultValue: string` 迁移为 `type: "string"`、`scope: "page"`。
 - 旧 `DataSourceRelation` 读取时映射为 interaction 的只读视图，保留一个版本后移除。
 - 新增模板 store 与建议忽略记录的独立持久化 key。
@@ -528,11 +550,13 @@ interface DataSource {
 - `src/editor/interaction/{types,runtime,setting-panel}.tsx`
 - `src/editor/resource/{scan,suggestion-store,merge-dialog}.ts(x)`
 - `src/editor/components/global-search/{index,dev,prod,setter}.tsx`
-- `src/editor/components/card-instance/{index,dev,prod}.tsx`
+- `src/editor/components/card-instance/{index,dev,prod,view}.tsx`
+- `src/editor/page-store/`：页面级 store 分组（`PageStores` / `DesignPageStores`）、Provider、hydrate 与旧数据兼容
+- `src/editor/layouts/{edit-layout,preview-layout}.tsx`：编辑 / 预览布局按需加载
 
 改造：
 
-- `src/editor/stores/pages.ts`：schema v2 + migrate
+- `src/editor/stores/pages.ts`：schema v4 + migrate
 - `src/editor/stores/variable.ts`：类型化变量与 CRUD
 - `src/editor/stores/page-data.ts`：单一状态源约定（保持 API）
 - `src/editor/data-source/runtime.ts`：参数 merge、single-flight、引用计数、失效、作用域
@@ -540,21 +564,23 @@ interface DataSource {
 - `src/editor/data-source/adapters/http.ts`：变量由 `LoadContext` 注入，不再直读全局 store
 - `src/editor/utils/action.ts`：事件流支持数据域参数
 - `src/editor/components/search-form/prod.tsx`：提交写入 SearchBus
+- `src/editor/layouts/index.tsx`：只保留组件配置加载与搜索恢复，编辑/预览布局 `lazy` 拆分
+- `src/editor/components/grid-layout/base.tsx`：编辑与预览共用的渲染层零 store 依赖，布局变更通过 `onLayoutChange` 上抛
 - `src/editor/layouts/stage/{edit,prod}.tsx`：CardInstance 渲染与 CardScope 注入
 - `src/editor/layouts/{material,sidebar,toolbar}/index.tsx`：模板分组、建议入口、新字段持久化
 - `src/editor/layouts/setting/attr.tsx`：按 Contract 动态生成属性面板
 
 ## 12. 实施顺序
 
-| 阶段 | 内容                                                                        | 覆盖需求   |
-| ---- | --------------------------------------------------------------------------- | ---------- |
-| P0   | 变量模型升级 + 单一状态源 + SearchBus + 搜索区改造                          | 4          |
-| P1   | DataSourceRegistry 重构（merge / single-flight / 引用计数 / 失效 / 作用域） | 3          |
-| P2   | CardTemplate + Contract + CardRuntime + 展开器 + CardInstance 渲染          | 1          |
-| P3   | 模板编辑器（暴露接口）+ 页面动态配置面板                                    | 1          |
-| P4   | PageInteraction + InteractionBus + 防环 + 配置面板                          | 2          |
-| P5   | resource/scan + 合并建议面板 + 合并事务                                     | 1/3/4 体验 |
-| P6   | 模板升级 diff、建议缓存优化、URL 同步、可视化连线                           | 增强       |
+| 阶段 | 内容                                                                          | 覆盖需求   |
+| ---- | ----------------------------------------------------------------------------- | ---------- |
+| P0   | 变量模型升级 + 单一状态源 + SearchBus + 搜索区改造                            | 4          |
+| P1   | DataSourceLoader 重构（merge / single-flight / 引用计数 / 失效 / 实例级隔离） | 3          |
+| P2   | CardTemplate + Contract + CardRuntime + 展开器 + CardInstance 渲染            | 1          |
+| P3   | 模板编辑器（暴露接口）+ 页面动态配置面板                                      | 1          |
+| P4   | PageInteraction + InteractionBus + 防环 + 配置面板                            | 2          |
+| P5   | resource/scan + 合并建议面板 + 合并事务                                       | 1/3/4 体验 |
+| P6   | 模板升级 diff、建议缓存优化、URL 同步、可视化连线                             | 增强       |
 
 ## 13. 验收标准
 
@@ -582,11 +608,11 @@ interface DataSource {
 
 ## 15. 术语表
 
-| 术语              | 含义                                      |
-| ----------------- | ----------------------------------------- |
-| Contract          | 卡片对外契约，页面可配置的唯一范围        |
-| Slot              | 卡片声明的数据插槽，由页面映射数据源      |
-| ScopeId           | 卡片实例的稳定标识，联动与事件均引用它    |
-| requestKey        | 数据源取数的最小缓存与去重单元            |
-| shared / isolated | 同一数据源的参数共享模式 / 消费者独立模式 |
-| MergeSuggestion   | 系统产出的只读合并建议，执行权在设计者    |
+| 术语              | 含义                                                              |
+| ----------------- | ----------------------------------------------------------------- |
+| Contract          | 卡片对外契约，页面可配置的唯一范围                                |
+| Slot              | 卡片声明的数据插槽，由页面映射数据源                              |
+| ComponentId       | 卡片实例的标识，即页面组件树的 `Component.id`，联动与事件均引用它 |
+| requestKey        | 数据源取数的最小缓存与去重单元                                    |
+| shared / isolated | 同一数据源的参数共享模式 / 消费者独立模式                         |
+| MergeSuggestion   | 系统产出的只读合并建议，执行权在设计者                            |

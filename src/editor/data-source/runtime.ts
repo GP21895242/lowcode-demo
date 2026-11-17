@@ -1,11 +1,13 @@
-import { create } from "zustand";
+import { createStore, type StoreApi } from "zustand/vanilla";
 import { getByPath } from "@/lib/utils";
-import { useComponetsStore } from "@/editor/stores/components";
-import { usePageDataStore } from "@/editor/stores/page-data";
 import { executeDataSource } from "./engine";
-import { findScopedSource, getScopedRelations } from "./scope-sources";
-import { useDataSourceStore } from "./store";
-import type { DataSourceSelection, LoadParams, LoadResult } from "./types";
+import type {
+  DataSource,
+  DataSourceRelation,
+  DataSourceSelection,
+  LoadParams,
+  LoadResult,
+} from "./types";
 
 export interface SourceRuntime {
   rows: any[];
@@ -23,12 +25,10 @@ export interface SourceRuntime {
 /** 消费者绑定模式：shared 共享参数与缓存，isolated 独立参数与缓存 */
 export type DataSourceBindingMode = "shared" | "isolated";
 
-export interface DataSourceScopeOptions {
-  /** page 或 card:<scopeId> */
-  scope?: string;
+export interface DataSourceBindingOptions {
   mode?: DataSourceBindingMode;
   consumerId?: string;
-  /** 取数上下文变量，缺省使用页面数据 */
+  /** 取数上下文变量，缺省使用运行时配置的变量来源 */
   variables?: Record<string, any>;
 }
 
@@ -37,33 +37,38 @@ interface State {
 }
 
 interface Action {
-  load: (sourceId: string, options?: { force?: boolean } & DataSourceScopeOptions) => Promise<void>;
+  load: (
+    sourceId: string,
+    options?: { force?: boolean } & DataSourceBindingOptions,
+  ) => Promise<void>;
   search: (
     sourceId: string,
     values: Record<string, any>,
-    options?: DataSourceScopeOptions,
+    options?: DataSourceBindingOptions,
   ) => Promise<void>;
-  clearSearch: (sourceId: string, options?: DataSourceScopeOptions) => Promise<void>;
+  clearSearch: (sourceId: string, options?: DataSourceBindingOptions) => Promise<void>;
   setFilters: (
     sourceId: string,
     filters: Record<string, any>,
-    options?: DataSourceScopeOptions,
+    options?: DataSourceBindingOptions,
   ) => Promise<void>;
   setSort: (
     sourceId: string,
     sort?: LoadParams["sort"],
-    options?: DataSourceScopeOptions,
+    options?: DataSourceBindingOptions,
   ) => Promise<void>;
   select: (
     sourceId: string,
     selection: DataSourceSelection | null,
-    options?: DataSourceScopeOptions,
+    options?: DataSourceBindingOptions,
   ) => Promise<void>;
-  retain: (sourceId: string, options?: DataSourceScopeOptions) => void;
-  release: (sourceId: string, options?: DataSourceScopeOptions) => void;
-  invalidate: (sourceId: string, options?: DataSourceScopeOptions) => void;
+  retain: (sourceId: string, options?: DataSourceBindingOptions) => void;
+  release: (sourceId: string, options?: DataSourceBindingOptions) => void;
+  invalidate: (sourceId: string, options?: DataSourceBindingOptions) => void;
   resetAll: () => void;
 }
+
+export type DataSourceLoaderState = State & Action;
 
 interface CacheEntry {
   entryKey: string;
@@ -76,11 +81,6 @@ interface CacheEntry {
 const STALE_TIME = 30_000;
 /** 缓存条目上限，超出后按 LRU 回收无引用的条目 */
 const CACHE_LIMIT = 100;
-
-const cache = new Map<string, CacheEntry>();
-const inFlight = new Map<string, Promise<LoadResult>>();
-const refCounts = new Map<string, number>();
-const controllers = new Map<string, AbortController>();
 
 function emptyParams(): LoadParams {
   return { search: {}, filters: {} };
@@ -97,14 +97,12 @@ function createEntry(): SourceRuntime {
 }
 
 /**
- * 解析订阅条目的 key：页面作用域直接使用 sourceId，卡片作用域加前缀；
- * isolated 模式再追加消费者，保证参数与缓存互不影响。
+ * 解析订阅条目的 key：默认按数据源共享；isolated 模式追加消费者，
+ * 保证参数与缓存互不影响。实例间隔离由各自独立的 store 保证。
  */
-export function resolveEntryKey(sourceId: string, options?: DataSourceScopeOptions) {
-  const scopeKey =
-    !options?.scope || options.scope === "page" ? sourceId : `${options.scope}:${sourceId}`;
-  if (options?.mode !== "isolated") return scopeKey;
-  return `${scopeKey}#c=${options.consumerId ?? "default"}`;
+function resolveEntryKey(sourceId: string, options?: DataSourceBindingOptions) {
+  if (options?.mode !== "isolated") return sourceId;
+  return `${sourceId}#c=${options.consumerId ?? "default"}`;
 }
 
 function stableStringify(value: any): string {
@@ -136,7 +134,7 @@ function mergeValues(base: Record<string, any>, next: Record<string, any>) {
   return merged;
 }
 
-function trimCache() {
+function trimCache(cache: Map<string, CacheEntry>, refCounts: Map<string, number>) {
   if (cache.size <= CACHE_LIMIT) return;
 
   for (const [key, entry] of cache) {
@@ -145,9 +143,28 @@ function trimCache() {
   }
 }
 
-export const useDataSourceRuntimeStore = create<State & Action>()((set, get) => {
+interface RuntimeActionDeps {
+  set: StoreApi<DataSourceLoaderState>["setState"];
+  get: () => DataSourceLoaderState;
+  /** 当前作用域的数据源定义 */
+  getSource: (sourceId: string) => DataSource | undefined;
+  getRelations: () => DataSourceRelation[];
+  getVariables: () => Record<string, any>;
+  getMode: () => "edit" | "preview";
+  resolveKey: (sourceId: string, options?: DataSourceBindingOptions) => string;
+}
+
+/**
+ * 运行时的状态与缓存在每个 store 内独立持有，天然按实例隔离
+ */
+function createRuntimeActions(deps: RuntimeActionDeps): Action {
+  const cache = new Map<string, CacheEntry>();
+  const inFlight = new Map<string, Promise<LoadResult>>();
+  const refCounts = new Map<string, number>();
+  const controllers = new Map<string, AbortController>();
+
   const patchEntry = (entryKey: string, patch: Partial<SourceRuntime>) => {
-    set((state) => ({
+    deps.set((state) => ({
       sources: {
         ...state.sources,
         [entryKey]: { ...createEntry(), ...state.sources[entryKey], ...patch },
@@ -159,7 +176,7 @@ export const useDataSourceRuntimeStore = create<State & Action>()((set, get) => 
     sourceId: string,
     entryKey: string,
     params: LoadParams,
-    options?: { force?: boolean } & DataSourceScopeOptions,
+    options?: { force?: boolean } & DataSourceBindingOptions,
   ) => {
     const key = toRequestKey(entryKey, params);
 
@@ -204,10 +221,8 @@ export const useDataSourceRuntimeStore = create<State & Action>()((set, get) => 
       return;
     }
 
-    // 卡片私有源优先于同名页面源，避免实例间定义串用
-    const source =
-      findScopedSource(options?.scope, sourceId) ??
-      useDataSourceStore.getState().sources.find((item) => item.id === sourceId);
+    // 作用域内私有源优先于同名页面源，避免实例间定义串用
+    const source = deps.getSource(sourceId);
     if (!source) {
       patchEntry(entryKey, { loading: false, status: "error", error: "数据源不存在" });
       return;
@@ -226,9 +241,9 @@ export const useDataSourceRuntimeStore = create<State & Action>()((set, get) => 
     });
 
     const promise = executeDataSource(source, params, {
-      mode: useComponetsStore.getState().mode,
+      mode: deps.getMode(),
       signal: controller.signal,
-      variables: options?.variables ?? usePageDataStore.getState().data,
+      variables: options?.variables ?? deps.getVariables(),
     }).then((result) => {
       cache.set(key, {
         entryKey,
@@ -236,7 +251,7 @@ export const useDataSourceRuntimeStore = create<State & Action>()((set, get) => 
         total: result.total,
         loadedAt: Date.now(),
       });
-      trimCache();
+      trimCache(cache, refCounts);
       return result;
     });
 
@@ -268,18 +283,16 @@ export const useDataSourceRuntimeStore = create<State & Action>()((set, get) => 
   };
 
   return {
-    sources: {},
-
     load: async (sourceId, options) => {
-      const entryKey = resolveEntryKey(sourceId, options);
-      const entry = get().sources[entryKey];
+      const entryKey = deps.resolveKey(sourceId, options);
+      const entry = deps.get().sources[entryKey];
       if (!options?.force && entry?.loading) return;
       await loadWithParams(sourceId, entryKey, entry?.params ?? emptyParams(), options);
     },
 
     search: async (sourceId, values, options) => {
-      const entryKey = resolveEntryKey(sourceId, options);
-      const entry = get().sources[entryKey];
+      const entryKey = deps.resolveKey(sourceId, options);
+      const entry = deps.get().sources[entryKey];
       await loadWithParams(
         sourceId,
         entryKey,
@@ -293,8 +306,8 @@ export const useDataSourceRuntimeStore = create<State & Action>()((set, get) => 
     },
 
     clearSearch: async (sourceId, options) => {
-      const entryKey = resolveEntryKey(sourceId, options);
-      const entry = get().sources[entryKey];
+      const entryKey = deps.resolveKey(sourceId, options);
+      const entry = deps.get().sources[entryKey];
       await loadWithParams(
         sourceId,
         entryKey,
@@ -304,8 +317,8 @@ export const useDataSourceRuntimeStore = create<State & Action>()((set, get) => 
     },
 
     setFilters: async (sourceId, filters, options) => {
-      const entryKey = resolveEntryKey(sourceId, options);
-      const entry = get().sources[entryKey];
+      const entryKey = deps.resolveKey(sourceId, options);
+      const entry = deps.get().sources[entryKey];
       await loadWithParams(
         sourceId,
         entryKey,
@@ -319,8 +332,8 @@ export const useDataSourceRuntimeStore = create<State & Action>()((set, get) => 
     },
 
     setSort: async (sourceId, sort, options) => {
-      const entryKey = resolveEntryKey(sourceId, options);
-      const entry = get().sources[entryKey];
+      const entryKey = deps.resolveKey(sourceId, options);
+      const entry = deps.get().sources[entryKey];
       await loadWithParams(
         sourceId,
         entryKey,
@@ -330,20 +343,15 @@ export const useDataSourceRuntimeStore = create<State & Action>()((set, get) => 
     },
 
     select: async (sourceId, selection, options) => {
-      const entryKey = resolveEntryKey(sourceId, options);
+      const entryKey = deps.resolveKey(sourceId, options);
       patchEntry(entryKey, { selection });
 
-      // 卡片作用域只应用卡片内部关系，页面作用域只应用页面关系
-      const relationList =
-        options?.scope && options.scope !== "page"
-          ? getScopedRelations(options.scope)
-          : useDataSourceStore.getState().relations;
-      const linked = relationList.filter(
-        (relation) => relation.enabled && relation.sourceId === sourceId,
-      );
+      const linked = deps
+        .getRelations()
+        .filter((relation) => relation.enabled && relation.sourceId === sourceId);
 
       for (const relation of linked) {
-        const targetEntry = get().sources[resolveEntryKey(relation.targetId, options)];
+        const targetEntry = deps.get().sources[deps.resolveKey(relation.targetId, options)];
         const filters = { ...(targetEntry?.params.filters ?? {}) };
         const key = relation.paramKey || relation.targetField;
         const value = selection
@@ -356,17 +364,17 @@ export const useDataSourceRuntimeStore = create<State & Action>()((set, get) => 
           filters[key] = value;
         }
 
-        await get().setFilters(relation.targetId, filters, options);
+        await deps.get().setFilters(relation.targetId, filters, options);
       }
     },
 
     retain: (sourceId, options) => {
-      const entryKey = resolveEntryKey(sourceId, options);
+      const entryKey = deps.resolveKey(sourceId, options);
       refCounts.set(entryKey, (refCounts.get(entryKey) ?? 0) + 1);
     },
 
     release: (sourceId, options) => {
-      const entryKey = resolveEntryKey(sourceId, options);
+      const entryKey = deps.resolveKey(sourceId, options);
       const next = (refCounts.get(entryKey) ?? 1) - 1;
       if (next <= 0) {
         refCounts.delete(entryKey);
@@ -376,7 +384,7 @@ export const useDataSourceRuntimeStore = create<State & Action>()((set, get) => 
     },
 
     invalidate: (sourceId, options) => {
-      const entryKey = resolveEntryKey(sourceId, options);
+      const entryKey = deps.resolveKey(sourceId, options);
 
       for (const [key, entry] of cache) {
         if (entry.entryKey === entryKey) cache.delete(key);
@@ -384,7 +392,7 @@ export const useDataSourceRuntimeStore = create<State & Action>()((set, get) => 
       controllers.get(entryKey)?.abort();
       controllers.delete(entryKey);
 
-      if (get().sources[entryKey]) {
+      if (deps.get().sources[entryKey]) {
         patchEntry(entryKey, {
           rows: [],
           total: undefined,
@@ -402,7 +410,84 @@ export const useDataSourceRuntimeStore = create<State & Action>()((set, get) => 
       cache.clear();
       inFlight.clear();
       refCounts.clear();
-      set({ sources: {} });
+      deps.set({ sources: {} });
     },
   };
-});
+}
+
+export interface DataSourceLoaderOptions {
+  /** 数据源定义来源，缺省使用本实例注册的作用域定义 */
+  getSource?: (sourceId: string) => DataSource | undefined;
+  /** 关系来源，缺省使用本实例注册的作用域关系 */
+  getRelations?: () => DataSourceRelation[];
+  /** 取数上下文变量，缺省为空对象 */
+  getVariables?: () => Record<string, any>;
+  /** 当前编辑模式，缺省按预览处理 */
+  getMode?: () => "edit" | "preview";
+}
+
+/** 单个数据源运行时：状态、缓存与订阅都封装独立，与其他实例天然隔离 */
+export interface DataSourceLoader {
+  store: StoreApi<DataSourceLoaderState>;
+  resolveEntryKey: (sourceId: string, options?: DataSourceBindingOptions) => string;
+  /** 注册作用域私有数据源与关系，卡片实例展开模板后写入 */
+  setDefinitions: (sources: DataSource[], relations?: DataSourceRelation[]) => void;
+  subscribeDefinitions: (listener: () => void) => () => void;
+  getDefinitionsVersion: () => number;
+  /** 仅查作用域私有源，供字段元数据使用 */
+  findSource: (sourceId: string) => DataSource | undefined;
+  /** 更新取数变量来源，卡片实例在布局阶段注入最新数据域 */
+  setVariableResolver: (resolver?: () => Record<string, any>) => void;
+  /** 卸载时中止请求并清空缓存 */
+  dispose: () => void;
+}
+
+export function createDataSourceLoader(options: DataSourceLoaderOptions = {}): DataSourceLoader {
+  const definitions: { sources: DataSource[]; relations: DataSourceRelation[] } = {
+    sources: [],
+    relations: [],
+  };
+  const definitionListeners = new Set<() => void>();
+  let definitionVersion = 0;
+  let variableResolver = options.getVariables;
+
+  const store = createStore<DataSourceLoaderState>()((set, get) => ({
+    sources: {},
+    ...createRuntimeActions({
+      set,
+      get,
+      getSource:
+        options.getSource ??
+        ((sourceId) => definitions.sources.find((source) => source.id === sourceId)),
+      getRelations: options.getRelations ?? (() => definitions.relations),
+      getVariables: () => (variableResolver ? variableResolver() : {}),
+      getMode: options.getMode ?? (() => "preview"),
+      resolveKey: resolveEntryKey,
+    }),
+  }));
+
+  return {
+    store,
+    resolveEntryKey,
+    setDefinitions: (sources, relations = []) => {
+      definitions.sources = sources;
+      definitions.relations = relations;
+      definitionVersion += 1;
+      definitionListeners.forEach((listener) => listener());
+    },
+    subscribeDefinitions: (listener) => {
+      definitionListeners.add(listener);
+      return () => {
+        definitionListeners.delete(listener);
+      };
+    },
+    getDefinitionsVersion: () => definitionVersion,
+    findSource: (sourceId) => definitions.sources.find((source) => source.id === sourceId),
+    setVariableResolver: (resolver) => {
+      variableResolver = resolver;
+    },
+    dispose: () => {
+      store.getState().resetAll();
+    },
+  };
+}

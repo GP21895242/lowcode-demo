@@ -6,7 +6,7 @@ export interface PageInteraction {
   enabled: boolean;
   trigger: {
     type: "card-event";
-    scopeId: string;
+    componentId: number;
     event: string;
     field?: string;
   };
@@ -14,6 +14,6 @@ export interface PageInteraction {
 }
 
 export type InteractionAction =
-  | { type: "set-input"; targetScopeId: string; key: string; valueFrom: string }
-  | { type: "invoke"; targetScopeId: string; method: string; argsFrom?: any }
+  | { type: "set-input"; targetComponentId: number; key: string; valueFrom: string }
+  | { type: "invoke"; targetComponentId: number; method: string; argsFrom?: any }
   | { type: "set-variable"; name: string; valueFrom: string };

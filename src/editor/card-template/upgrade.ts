@@ -19,7 +19,6 @@ export interface ContractDiff {
 
 export interface UpgradeCandidate {
   componentId: number;
-  scopeId: string;
   template: CardTemplate;
   fromVersion: number;
   toVersion: number;
@@ -164,7 +163,6 @@ export function diffContract(oldContract: CardContract | undefined, nextContract
 function collectInstances(components: Component[]) {
   const instances: {
     componentId: number;
-    scopeId: string;
     templateId: string;
     version: number;
     inputValues: Record<string, any>;
@@ -173,14 +171,13 @@ function collectInstances(components: Component[]) {
 
   const walk = (nodes: Component[]) => {
     nodes.forEach((node) => {
-      if (node.name === ItemType.CardInstance && node.props?.scopeId) {
+      if (node.name === ItemType.CardInstance) {
         instances.push({
           componentId: node.id,
-          scopeId: String(node.props.scopeId),
-          templateId: String(node.props.templateId ?? ""),
-          version: Number(node.props.templateVersion ?? 0),
-          inputValues: (node.props.inputValues ?? {}) as Record<string, any>,
-          slotMapping: (node.props.slotMapping ?? {}) as Record<string, string>,
+          templateId: String(node.props?.templateId ?? ""),
+          version: Number(node.props?.templateVersion ?? 0),
+          inputValues: (node.props?.inputValues ?? {}) as Record<string, any>,
+          slotMapping: (node.props?.slotMapping ?? {}) as Record<string, string>,
         });
       }
       if (node.children?.length) walk(node.children);
@@ -196,7 +193,7 @@ function collectInstances(components: Component[]) {
  */
 function collectInteractionBreaking(
   interaction: PageInteraction,
-  scopeId: string,
+  componentId: number,
   template: CardTemplate,
 ): ContractDiffItem[] {
   const items: ContractDiffItem[] = [];
@@ -205,7 +202,7 @@ function collectInteractionBreaking(
   const methodKeys = new Set((template.contract.methods ?? []).map((method) => method.name));
 
   if (
-    interaction.trigger.scopeId === scopeId &&
+    interaction.trigger.componentId === componentId &&
     interaction.trigger.event &&
     !eventKeys.has(interaction.trigger.event)
   ) {
@@ -219,7 +216,7 @@ function collectInteractionBreaking(
   }
 
   interaction.actions.forEach((action) => {
-    if (action.type === "set-variable" || action.targetScopeId !== scopeId) return;
+    if (action.type === "set-variable" || action.targetComponentId !== componentId) return;
 
     if (action.type === "set-input" && action.key && !inputKeys.has(action.key)) {
       items.push({
@@ -297,7 +294,7 @@ export function scanUpgrades(input: {
     }
 
     interactions.forEach((interaction) => {
-      breaking.push(...collectInteractionBreaking(interaction, instance.scopeId, template));
+      breaking.push(...collectInteractionBreaking(interaction, instance.componentId, template));
     });
 
     // 同一失效配置可能被多条联动引用，按类型与 key 去重
@@ -311,7 +308,6 @@ export function scanUpgrades(input: {
 
     candidates.push({
       componentId: instance.componentId,
-      scopeId: instance.scopeId,
       template,
       fromVersion: instance.version,
       toVersion: template.version,

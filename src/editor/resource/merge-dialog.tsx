@@ -30,7 +30,7 @@ import { getMergeSuggestions } from "./scan-cache";
 import { useSuggestionStore } from "./suggestion-store";
 
 function candidateKey(candidate: MergeSuggestion["candidates"][number]) {
-  return `${candidate.scopeId}:${candidate.key}`;
+  return `${candidate.componentId}:${candidate.key}`;
 }
 
 function buildMergedSource(
@@ -234,13 +234,13 @@ export default function MergeDialog() {
           !targets.some(
             (target) =>
               target.kind === "card" &&
-              target.scopeId === candidate.scopeId &&
+              target.componentId === candidate.componentId &&
               target.inputKey === candidate.key,
           )
         ) {
           targets.push({
             kind: "card",
-            scopeId: candidate.scopeId,
+            componentId: candidate.componentId,
             inputKey: candidate.key,
             variable,
           });

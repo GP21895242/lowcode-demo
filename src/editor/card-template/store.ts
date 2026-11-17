@@ -15,7 +15,7 @@ const TEMPLATE_SCHEMA_VERSION = 1;
 export interface CardTemplateReference {
   pageId: string;
   pageName: string;
-  instanceIds: number[];
+  componentIds: number[];
 }
 
 interface State {
@@ -86,7 +86,7 @@ export function getTemplateReferences(templateId: string): CardTemplateReference
   const references: CardTemplateReference[] = [];
 
   usePagesStore.getState().pages.forEach((page) => {
-    const instanceIds: number[] = [];
+    const componentIds: number[] = [];
 
     const walk = (components: Component[]) => {
       components.forEach((component) => {
@@ -94,7 +94,7 @@ export function getTemplateReferences(templateId: string): CardTemplateReference
           component.name === ItemType.CardInstance &&
           component.props?.templateId === templateId
         ) {
-          instanceIds.push(component.id);
+          componentIds.push(component.id);
         }
         if (component.children?.length) walk(component.children);
       });
@@ -102,8 +102,8 @@ export function getTemplateReferences(templateId: string): CardTemplateReference
 
     walk(page.components ?? []);
 
-    if (instanceIds.length) {
-      references.push({ pageId: page.id, pageName: page.name, instanceIds });
+    if (componentIds.length) {
+      references.push({ pageId: page.id, pageName: page.name, componentIds });
     }
   });
 
@@ -131,7 +131,6 @@ export function createCardInstanceProps(template: CardTemplate): CardInstancePro
   return {
     templateId: template.id,
     templateVersion: template.version,
-    scopeId: `card_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
     inputValues: {},
     slotMapping: {},
   };

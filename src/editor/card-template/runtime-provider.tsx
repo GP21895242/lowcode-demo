@@ -8,12 +8,15 @@ import {
   type ReactNode,
 } from "react";
 import { getByPath } from "@/lib/utils";
-import { useDataSourceRuntimeStore } from "../data-source/runtime";
-import { registerScopedSources, unregisterScopedSources } from "../data-source/scope-sources";
-import { usePageDataStore } from "../stores/page-data";
+import { createDataSourceLoader } from "../data-source/runtime";
+import {
+  useCardRegistry,
+  usePageDataStore,
+  usePageMode,
+  usePageStores,
+} from "../page-store/contexts";
 import type { EventDomain } from "../utils/action";
 import { useExpandedTemplate, type ExpandedTemplate } from "./expander";
-import { registerCardInstance, unregisterCardInstance } from "./registry";
 import { CardRuntimeContext, type CardRuntimeContextValue } from "./runtime-context";
 import { CardScopeContext, type CardSourceScope } from "./scope-context";
 import { isCardSlotRef, readCardSlotKey, type CardInputDef, type CardTemplate } from "./types";
@@ -22,7 +25,7 @@ const EMPTY_INPUTS: Record<string, any> = {};
 
 interface CardRuntimeProviderProps {
   template: CardTemplate;
-  scopeId: string;
+  componentId: number;
   inputs?: Record<string, any>;
   slotMapping?: Record<string, string>;
   onEmit?: (event: string, payload: any) => void;
@@ -41,7 +44,7 @@ function getInitialData(variables: { name: string; defaultValue: any }[]) {
  */
 export function CardRuntimeProvider({
   template,
-  scopeId,
+  componentId,
   inputs,
   slotMapping,
   onEmit,
@@ -49,20 +52,23 @@ export function CardRuntimeProvider({
 }: CardRuntimeProviderProps) {
   const expanded = useExpandedTemplate(template);
   const contract = template.contract;
-  const scope = `card:${scopeId}`;
+  const pageStores = usePageStores();
+  const pageRuntime = pageStores.sourceLoader;
+  const mode = usePageMode();
+  const cards = useCardRegistry();
   const pageData = usePageDataStore((state) => state.data);
 
   const [runtimeInputs, setRuntimeInputs] = useState<{
-    scopeId: string;
+    componentId: number;
     values: Record<string, any>;
-  }>({ scopeId, values: {} });
+  }>({ componentId, values: {} });
   const [data, setData] = useState<Record<string, any>>(() =>
     getInitialData(expanded?.variables ?? []),
   );
   const [componentRefs] = useState(() => new Map<number, any>());
 
   const scopedRuntimeInputs =
-    runtimeInputs.scopeId === scopeId ? runtimeInputs.values : EMPTY_INPUTS;
+    runtimeInputs.componentId === componentId ? runtimeInputs.values : EMPTY_INPUTS;
   const values = useMemo(
     () => ({ ...(inputs ?? {}), ...scopedRuntimeInputs }),
     [inputs, scopedRuntimeInputs],
@@ -118,19 +124,31 @@ export function CardRuntimeProvider({
 
   const inputVarsRef = useRef(inputVarValues);
 
+  // 每个卡片实例持有独立的数据源加载器，经 Context 下发，不写入全局 store
+  const [runtime] = useState(() => createDataSourceLoader({ getMode: () => mode }));
+
   useLayoutEffect(() => {
     dataRef.current = data;
     valuesRef.current = resolvedValues;
     inputVarsRef.current = inputVarValues;
   }, [data, inputVarValues, resolvedValues]);
 
+  // 取数变量来自卡片数据域，refs 保证运行时始终读到最新值
+  useLayoutEffect(() => {
+    runtime.setVariableResolver(() => ({
+      ...dataRef.current,
+      ...inputVarsRef.current,
+      $props: valuesRef.current,
+    }));
+  }, [runtime]);
+
   // 父组件布局 effect 先于子组件取数 effect 执行，确保私有源已注册
   useLayoutEffect(() => {
-    if (!expanded) return;
+    runtime.setDefinitions(expanded?.sources ?? [], expanded?.relations ?? []);
+  }, [expanded, runtime]);
 
-    registerScopedSources(scope, expanded.sources, expanded.relations);
-    return () => unregisterScopedSources(scope);
-  }, [expanded, scope]);
+  // 实例卸载即中止请求并释放缓存，避免残留
+  useEffect(() => () => runtime.dispose(), [runtime]);
 
   const getData = useCallback(
     (key: string) => {
@@ -168,14 +186,14 @@ export function CardRuntimeProvider({
         const mapped = slotMapping?.[readCardSlotKey(sourceId)];
         return {
           sourceId: mapped ?? "",
-          scope: "page",
-          getVariables: () => usePageDataStore.getState().data,
+          runtime: pageRuntime,
+          getVariables: () => pageStores.pageData.getState().data,
         };
       }
 
       return {
         sourceId,
-        scope,
+        runtime,
         getVariables: () => ({
           ...dataRef.current,
           ...inputVarsRef.current,
@@ -183,7 +201,7 @@ export function CardRuntimeProvider({
         }),
       };
     },
-    [scope, slotMapping],
+    [pageRuntime, pageStores, runtime, slotMapping],
   );
 
   const propOverrides = useMemo(() => {
@@ -229,26 +247,25 @@ export function CardRuntimeProvider({
   const setInput = useCallback(
     (key: string, value: any) => {
       setRuntimeInputs((prev) => {
-        const base = prev.scopeId === scopeId ? prev.values : {};
-        return { scopeId, values: { ...base, [key]: value } };
+        const base = prev.componentId === componentId ? prev.values : {};
+        return { componentId, values: { ...base, [key]: value } };
       });
     },
-    [scopeId],
+    [componentId],
   );
 
   const reload = useCallback(() => {
     if (!expanded) return;
 
-    const runtime = useDataSourceRuntimeStore.getState();
     const variables = {
       ...dataRef.current,
       ...inputVarsRef.current,
       $props: valuesRef.current,
     };
     expanded.sources.forEach((source) => {
-      void runtime.load(source.id, { force: true, scope, variables });
+      void runtime.store.getState().load(source.id, { force: true, variables });
     });
-  }, [expanded, scope]);
+  }, [expanded, runtime]);
 
   // 联动写入的运行时输入变化后按新输入重新取数，卡片内部过滤才会立即生效
   const previousRuntimeInputsRef = useRef(scopedRuntimeInputs);
@@ -278,8 +295,8 @@ export function CardRuntimeProvider({
   );
 
   useEffect(() => {
-    registerCardInstance({
-      scopeId,
+    cards.register({
+      componentId,
       templateId: template.id,
       templateName: template.name,
       setInput,
@@ -288,8 +305,8 @@ export function CardRuntimeProvider({
       invoke,
     });
 
-    return () => unregisterCardInstance(scopeId);
-  }, [scopeId, template.id, template.name, setInput, reload, invoke]);
+    return () => cards.unregister(componentId);
+  }, [cards, componentId, template.id, template.name, setInput, reload, invoke]);
 
   const contractEvents = useMemo(
     () => new Set(contract.events.map((event) => event.name)),
@@ -298,7 +315,7 @@ export function CardRuntimeProvider({
 
   const runtimeValue = useMemo<CardRuntimeContextValue>(
     () => ({
-      scopeId,
+      componentId,
       contract,
       expanded: expanded as ExpandedTemplate,
       inputs: resolvedValues,
@@ -311,7 +328,7 @@ export function CardRuntimeProvider({
       setComponentRef: setInternalComponentRef,
     }),
     [
-      scopeId,
+      componentId,
       contract,
       expanded,
       resolvedValues,
@@ -325,7 +342,10 @@ export function CardRuntimeProvider({
     ],
   );
 
-  const scopeValue = useMemo(() => ({ scopeId, resolveSource }), [scopeId, resolveSource]);
+  const scopeValue = useMemo(
+    () => ({ componentId, resolveSource, runtime }),
+    [componentId, resolveSource, runtime],
+  );
 
   if (!expanded) return null;
 

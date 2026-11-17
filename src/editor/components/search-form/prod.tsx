@@ -10,12 +10,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../../components/ui/select";
-import { useDataSourceStore } from "../../data-source/store";
-import { useDataSourceRuntimeStore } from "../../data-source/runtime";
+import {
+  useDataSourcesStore,
+  usePageDataStore,
+  usePageSearchStore,
+  useSourceLoader,
+} from "../../page-store/contexts";
 import type { DataSourceField } from "../../data-source/types";
-import { usePageSearchStore } from "../../search/store";
 import { toSearchDataKey } from "../../search/targets";
-import { usePageDataStore } from "../../stores/page-data";
 import type { CommonComponentProps } from "../../interface";
 
 interface SearchItemInfo {
@@ -35,8 +37,10 @@ function unwrap(value: any) {
 }
 
 function SearchFormProd({ children, onSearch, labelPosition }: CommonComponentProps) {
-  const sources = useDataSourceStore((state) => state.sources);
+  const sources = useDataSourcesStore((state) => state.sources);
   const pageData = usePageDataStore((state) => state.data);
+  const pageRuntime = useSourceLoader();
+  const searchBus = usePageSearchStore();
 
   const items = useMemo<SearchItemInfo[]>(() => {
     return (
@@ -63,7 +67,6 @@ function SearchFormProd({ children, onSearch, labelPosition }: CommonComponentPr
     {
       onSubmit: (values) => {
         const groups: Record<string, Record<string, any>> = {};
-        const searchBus = usePageSearchStore.getState();
 
         items.forEach((item) => {
           // 搜索值统一写入 pageData.search.<key>，供 ${search.xxx} 表达式使用
@@ -80,7 +83,7 @@ function SearchFormProd({ children, onSearch, labelPosition }: CommonComponentPr
         } else {
           // 未配置搜索区时保持原有按数据源分组的行为
           Object.entries(groups).forEach(([sourceId, searchValues]) => {
-            void useDataSourceRuntimeStore.getState().search(sourceId, searchValues);
+            void pageRuntime.store.getState().search(sourceId, searchValues);
           });
         }
 
@@ -195,7 +198,6 @@ function SearchFormProd({ children, onSearch, labelPosition }: CommonComponentPr
             <Button
               variant="outline"
               onClick={() => {
-                const searchBus = usePageSearchStore.getState();
                 form.reset();
                 if (searchBus.config) {
                   // 有页面搜索配置时按变量默认值回填、重新分发并清理地址栏参数

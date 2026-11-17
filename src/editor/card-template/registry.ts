@@ -1,35 +1,28 @@
+import { getActivePageStores } from "../page-store/active";
+import type { CardInstanceHandle } from "../page-store/stores/cards";
+
 /** 卡片实例暴露给页面的运行时代理 */
-export interface CardInstanceHandle {
-  scopeId: string;
-  templateId: string;
-  templateName: string;
-  /** 写入实例输入，等价于联动 set-input */
-  setInput: (key: string, value: any) => void;
-  getInputs: () => Record<string, any>;
-  /** 重新加载卡片私有数据源 */
-  reload: () => void;
-  /** 调用契约方法 */
-  invoke: (method: string, args?: any) => any;
-}
+export type { CardInstanceHandle } from "../page-store/stores/cards";
 
-const instances = new Map<string, CardInstanceHandle>();
-
+/**
+ * 卡片实例注册表（旧入口）：转发到当前活动页面实例
+ */
 export function registerCardInstance(handle: CardInstanceHandle) {
-  instances.set(handle.scopeId, handle);
+  getActivePageStores().cards.register(handle);
 }
 
-export function unregisterCardInstance(scopeId: string) {
-  instances.delete(scopeId);
+export function unregisterCardInstance(componentId: number) {
+  getActivePageStores().cards.unregister(componentId);
 }
 
-export function getCardInstance(scopeId?: string) {
-  return scopeId ? instances.get(scopeId) : undefined;
+export function getCardInstance(componentId?: number) {
+  return getActivePageStores().cards.get(componentId);
 }
 
-export function setCardInput(scopeId: string, key: string, value: any) {
-  instances.get(scopeId)?.setInput(key, value);
+export function setCardInput(componentId: number, key: string, value: any) {
+  getActivePageStores().cards.setInput(componentId, key, value);
 }
 
-export function invokeCardMethod(scopeId: string, method: string, args?: any) {
-  return instances.get(scopeId)?.invoke(method, args);
+export function invokeCardMethod(componentId: number, method: string, args?: any) {
+  return getActivePageStores().cards.invoke(componentId, method, args);
 }

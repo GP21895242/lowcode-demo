@@ -21,7 +21,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { useDataSourceRuntimeStore } from "@/editor/data-source/runtime";
+import { usePageStores } from "@/editor/page-store/contexts";
 import { createEmptyDataSource, createField, inferFields } from "@/editor/data-source/schema";
 import { useDataSourceStore } from "@/editor/data-source/store";
 import type {
@@ -250,6 +250,7 @@ function FieldEditor({
 export function DataSourceEditor({ open, source, onClose }: Props) {
   const addSource = useDataSourceStore((state) => state.addSource);
   const updateSource = useDataSourceStore((state) => state.updateSource);
+  const pageRuntime = usePageStores().sourceLoader;
 
   const [draft, setDraft] = useState<DataSource>(() => createEmptyDataSource());
   const [mockText, setMockText] = useState("[]");
@@ -341,7 +342,7 @@ export function DataSourceEditor({ open, source, onClose }: Props) {
       addSource(next);
     }
 
-    const runtime = useDataSourceRuntimeStore.getState();
+    const runtime = pageRuntime.store.getState();
     if (runtime.sources[next.id]) {
       runtime.invalidate(next.id);
       void runtime.load(next.id, { force: true });

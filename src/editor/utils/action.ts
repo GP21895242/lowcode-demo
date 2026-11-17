@@ -1,11 +1,12 @@
 ﻿import axios from "axios";
+import type { StoreApi } from "zustand/vanilla";
 
 import { openConfirm } from "../common/confirm-dialog";
 import { toast } from "../../components/ui/toast";
 import { getByPath } from "../../lib/utils";
 import type { Node } from "../layouts/flow-event/data";
-import { getComponentRef } from "../stores/component-ref";
-import { usePageDataStore } from "../stores/page-data";
+import type { PageDataStore } from "../page-store/stores/page-data";
+import type { RefRegistry } from "../page-store/stores/refs";
 
 /**
  * 事件流的数据域：页面事件流写页面数据，卡片内部事件流写卡片数据域
@@ -17,20 +18,29 @@ export interface EventDomain {
   getComponentRef: (componentId: number) => any;
 }
 
-const pageEventDomain: EventDomain = {
-  getData: (key) => usePageDataStore.getState().data[key],
-  getDataSnapshot: () => usePageDataStore.getState().data,
-  setData: (key, value) => usePageDataStore.getState().setData(key, value),
-  getComponentRef,
-};
+/**
+ * 页面事件流数据域：由页面实例的 pageData 与组件 ref 注册表构造
+ */
+export function createPageEventDomain(
+  pageData: StoreApi<PageDataStore>,
+  refs: RefRegistry,
+): EventDomain {
+  return {
+    getData: (key) => pageData.getState().data[key],
+    getDataSnapshot: () => pageData.getState().data,
+    setData: (key, value) => pageData.getState().setData(key, value),
+    getComponentRef: (componentId) => refs.get(componentId),
+  };
+}
 
 export function execEventFlow(
   nodes: Node[] = [],
   eventData?: any,
   initEventData?: any,
-  domain: EventDomain = pageEventDomain,
+  domain?: EventDomain,
 ) {
   if (!nodes.length) return;
+  if (!domain) return;
 
   nodes.forEach(async (item: Node) => {
     // 判断是否是动作节点，如果是动作节点并且条件结果不为false，则执行动作
@@ -279,7 +289,7 @@ function execScript(script: string, eventData: any, initEventData: any, domain: 
 
   const ctx = {
     setData: domain.setData,
-    getComponentRef,
+    getComponentRef: domain.getComponentRef,
     getData: domain.getData,
     eventData,
     initEventData,

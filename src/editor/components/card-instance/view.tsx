@@ -5,7 +5,7 @@ import { useCardTemplate } from "../../card-template/store";
 
 interface CardInstanceViewProps {
   templateId?: string;
-  scopeId?: string;
+  componentId?: number;
   inputValues?: Record<string, any>;
   slotMapping?: Record<string, string>;
   onEmit?: (event: string, payload: any) => void;
@@ -17,7 +17,7 @@ interface CardInstanceViewProps {
  */
 export default function CardInstanceView({
   templateId,
-  scopeId,
+  componentId,
   inputValues,
   slotMapping,
   onEmit,
@@ -33,10 +33,10 @@ export default function CardInstanceView({
     );
   }
 
-  if (!scopeId) {
+  if (!componentId) {
     return (
       <div className="rounded-md border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
-        卡片实例缺少 scopeId，无法建立独立运行时
+        卡片实例缺少 componentId，无法建立独立运行时
       </div>
     );
   }
@@ -45,7 +45,7 @@ export default function CardInstanceView({
     <CardErrorBoundary key={`${template.id}@${template.version}`} title={template.name}>
       <CardRuntimeProvider
         template={template}
-        scopeId={scopeId}
+        componentId={componentId}
         inputs={inputValues}
         slotMapping={slotMapping}
         onEmit={onEmit}

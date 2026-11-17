@@ -54,11 +54,11 @@ function template(overrides: Partial<CardTemplate> = {}): CardTemplate {
   };
 }
 
-function instance(id: number, scopeId: string, slotMapping: Record<string, string>) {
+function instance(id: number, slotMapping: Record<string, string>) {
   return component({
     id,
     name: ItemType.CardInstance,
-    props: { templateId: "tpl-scan", templateVersion: 1, scopeId, inputValues: {}, slotMapping },
+    props: { templateId: "tpl-scan", templateVersion: 1, inputValues: {}, slotMapping },
   });
 }
 
@@ -90,7 +90,7 @@ describe("fingerprintSource", () => {
 describe("scanMerges", () => {
   it("插入相同卡片时不产生任何合并建议", () => {
     const suggestions = scanMerges({
-      components: [instance(1, "scope-a", { list: "s1" }), instance(2, "scope-b", { list: "s1" })],
+      components: [instance(1, { list: "s1" }), instance(2, { list: "s1" })],
       sources: [source("s1")],
       templates: [template()],
     });
@@ -114,7 +114,7 @@ describe("scanMerges", () => {
     });
 
     const suggestions = scanMerges({
-      components: [instance(1, "scope-a", { list: "s1" }), instance(2, "scope-b", { list: "s2" })],
+      components: [instance(1, { list: "s1" }), instance(2, { list: "s2" })],
       sources: [target, duplicate],
       templates: [template()],
     });
@@ -148,12 +148,12 @@ describe("scanMerges", () => {
         component({
           id: 1,
           name: ItemType.CardInstance,
-          props: { templateId: "tpl-search", scopeId: "scope-a", slotMapping: {} },
+          props: { templateId: "tpl-search", slotMapping: {} },
         }),
         component({
           id: 2,
           name: ItemType.CardInstance,
-          props: { templateId: "tpl-search", scopeId: "scope-b", slotMapping: {} },
+          props: { templateId: "tpl-search", slotMapping: {} },
         }),
       ],
       sources: [],

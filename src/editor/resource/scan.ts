@@ -14,9 +14,7 @@ export interface MergeConflict {
 }
 
 export interface SuggestionCandidate {
-  /** 卡片实例稳定标识 */
-  scopeId: string;
-  /** 卡片组件 id，用于定位实例 */
+  /** 卡片组件 id，即卡片实例的唯一标识 */
   componentId: number;
   /** 插槽 key 或输入 key */
   key: string;
@@ -41,7 +39,6 @@ export interface MergeSuggestion {
 
 interface CardInstanceRef {
   componentId: number;
-  scopeId: string;
   templateId: string;
   slotMapping: Record<string, string>;
 }
@@ -82,11 +79,10 @@ export function fingerprintSource(source: DataSource) {
 
 function collectInstances(components: Component[], result: CardInstanceRef[] = []) {
   components.forEach((component) => {
-    if (component.name === ItemType.CardInstance && component.props?.scopeId) {
+    if (component.name === ItemType.CardInstance) {
       result.push({
         componentId: component.id,
-        scopeId: String(component.props.scopeId),
-        templateId: String(component.props.templateId ?? ""),
+        templateId: String(component.props?.templateId ?? ""),
         slotMapping: (component.props.slotMapping ?? {}) as Record<string, string>,
       });
     }
@@ -189,7 +185,6 @@ export function scanMerges(input: {
       const fingerprint = fingerprintSource(source);
       const group = groups.get(fingerprint) ?? { refs: [], sourceIds: new Set<string>() };
       group.refs.push({
-        scopeId: instance.scopeId,
         componentId: instance.componentId,
         key: slot.key,
         sourceId,
@@ -215,7 +210,7 @@ export function scanMerges(input: {
 
     suggestions.push({
       id: `source:${fingerprint}:${group.refs
-        .map((ref) => `${ref.scopeId}.${ref.key}`)
+        .map((ref) => `${ref.componentId}.${ref.key}`)
         .sort()
         .join(",")}`,
       kind: "source",
@@ -237,7 +232,6 @@ export function scanMerges(input: {
 
       const list = searchGroups.get(input.key) ?? [];
       list.push({
-        scopeId: instance.scopeId,
         componentId: instance.componentId,
         key: input.key,
         label: `${template?.name ?? "卡片"} · ${input.label}`,
@@ -249,16 +243,16 @@ export function scanMerges(input: {
   });
 
   searchGroups.forEach((candidates, key) => {
-    const scopeIds = [...new Set(candidates.map((candidate) => candidate.scopeId))];
-    if (scopeIds.length < 2) return;
+    const componentIds = [...new Set(candidates.map((candidate) => candidate.componentId))];
+    if (componentIds.length < 2) return;
 
     const conflicts = detectSearchControlConflict(candidates);
     suggestions.push({
-      id: `search:${key}:${scopeIds.sort().join(",")}`,
+      id: `search:${key}:${componentIds.sort((left, right) => left - right).join(",")}`,
       kind: "search-field",
       confidence: conflicts.length ? "medium" : "high",
       reasons: [
-        `${scopeIds.length} 张卡片暴露了同名可搜索输入「${key}」`,
+        `${componentIds.length} 张卡片暴露了同名可搜索输入「${key}」`,
         "合并只新增页面搜索字段与卡片绑定，不改卡片内部控件",
       ],
       candidates,

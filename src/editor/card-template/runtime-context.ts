@@ -5,7 +5,7 @@ import type { CardSourceScope } from "./scope-context";
 import type { CardContract } from "./types";
 
 export interface CardRuntimeContextValue {
-  scopeId: string;
+  componentId: number;
   contract: CardContract;
   expanded: ExpandedTemplate;
   /** 当前生效的输入（页面配置 + 联动写入） */

@@ -88,14 +88,12 @@ export interface CardTemplate {
 }
 
 /**
- * 页面中的卡片实例节点属性，只允许契约数据与稳定的 scopeId
+ * 页面中的卡片实例节点属性，只允许契约数据；实例标识即页面组件树的 Component.id
  */
 export interface CardInstanceProps {
   templateId: string;
   /** 创建时版本，用于提示升级 */
   templateVersion: number;
-  /** 插入时生成，永久稳定，联动/事件/方法均引用它 */
-  scopeId: string;
   /** 仅允许 contract.inputs 的 key */
   inputValues: Record<string, any>;
   /** 仅允许 contract.slots 的 key → 页面 sourceId */

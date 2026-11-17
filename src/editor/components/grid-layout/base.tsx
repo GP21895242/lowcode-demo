@@ -9,11 +9,12 @@ import ReactGridLayout, {
 import "react-grid-layout/css/styles.css";
 
 import type { CommonComponentProps } from "../../interface";
-import { useComponetsStore } from "../../stores/components";
 
 interface GridLayoutBaseProps extends CommonComponentProps {
   /** 编辑态：显示空状态提示，并把布局写回组件属性 */
   editable?: boolean;
+  /** 编辑态布局变化回调，由设计态包装层注入，预览态不依赖设计 store */
+  onLayoutChange?: (layout: LayoutItem[]) => void;
 }
 
 const DEFAULT_COLS = 12;
@@ -61,14 +62,13 @@ function serializeLayout(layout: LayoutItem[]) {
 }
 
 function GridLayoutBase({
-  _id,
   cols,
   rowHeight,
   layout,
   children,
   editable = false,
+  onLayoutChange,
 }: GridLayoutBaseProps) {
-  const updateComponentProps = useComponetsStore((state) => state.updateComponentProps);
   const { width, containerRef, mounted } = useContainerWidth({ initialWidth: 960 });
 
   const columnCount = Math.max(1, Math.round(toPositiveNumber(cols, DEFAULT_COLS)));
@@ -144,9 +144,9 @@ function GridLayoutBase({
       if (next.length !== entries.length) return;
       if (serializeLayout(next) === serializeLayout(storedLayout)) return;
 
-      updateComponentProps(_id, { layout: { type: "static", value: next } });
+      onLayoutChange?.(next);
     },
-    [_id, editable, entries, storedLayout, updateComponentProps],
+    [editable, entries, storedLayout, onLayoutChange],
   );
 
   // 网格拖动过程中同步画布选中遮罩

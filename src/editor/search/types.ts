@@ -8,7 +8,7 @@ export type SearchControl = "input" | "select" | "date" | "dateRange" | "numberR
  */
 export type SearchTarget =
   | { kind: "source"; sourceId: string; paramKey: string; variable: string }
-  | { kind: "card"; scopeId: string; inputKey: string; variable: string };
+  | { kind: "card"; componentId: number; inputKey: string; variable: string };
 
 export interface SearchFieldDef {
   /**

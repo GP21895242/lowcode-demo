@@ -1,10 +1,12 @@
 import { useDrop } from "../../hooks/use-drop";
 import type { CommonComponentProps } from "../../interface";
+import { useComponetsStore } from "../../stores/components";
 import GridLayoutBase from "./base";
 
 function GridLayoutDev(props: CommonComponentProps) {
   const { _id, _name } = props;
   const { canDrop, drop } = useDrop(_id, _name);
+  const updateComponentProps = useComponetsStore((state) => state.updateComponentProps);
 
   return (
     <div
@@ -15,7 +17,13 @@ function GridLayoutDev(props: CommonComponentProps) {
         canDrop ? "bg-muted/50 outline-2 outline-primary" : ""
       }`}
     >
-      <GridLayoutBase {...props} editable />
+      <GridLayoutBase
+        {...props}
+        editable
+        onLayoutChange={(layout) =>
+          updateComponentProps(_id, { layout: { type: "static", value: layout } })
+        }
+      />
     </div>
   );
 }

@@ -1,19 +1,8 @@
 import { ArrowLeft } from "lucide-react";
-import { useEffect, useLayoutEffect, useState } from "react";
 import { Button } from "../components/ui/button";
-import { Spinner } from "../components/ui/spinner";
-import { useDataSourceRuntimeStore } from "../editor/data-source/runtime";
-import { useDataSourceStore } from "../editor/data-source/store";
 import Layout from "../editor/layouts";
-import { usePageSearchStore } from "../editor/search/store";
-import { useInteractionStore } from "../editor/interaction/runtime";
-import { useSuggestionStore } from "../editor/resource/suggestion-store";
-import { clearComponentRef } from "../editor/stores/component-ref";
-import { useComponetsStore } from "../editor/stores/components";
-import { usePageDataStore } from "../editor/stores/page-data";
+import { PageProvider } from "../editor/page-store/provider";
 import { usePagesStore } from "../editor/stores/pages";
-import { useVariablesStore } from "../editor/stores/variable";
-import { getVariablesDefaultData } from "../editor/utils/utils";
 
 interface EditorPageProps {
   pageId: string;
@@ -23,54 +12,6 @@ interface EditorPageProps {
 
 export default function EditorPage({ pageId, view, fromEdit }: EditorPageProps) {
   const page = usePagesStore((state) => state.pages.find((item) => item.id === pageId));
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    const currentPage = usePagesStore.getState().pages.find((item) => item.id === pageId);
-    if (!currentPage) return;
-
-    let cancelled = false;
-    const design = structuredClone(currentPage);
-    useComponetsStore.setState({
-      components: design.components,
-      curComponentId: null,
-      curComponent: null,
-      editType: "page",
-      clipboard: null,
-      past: [],
-      future: [],
-    });
-    useVariablesStore.getState().setVariables(design.variables);
-    useDataSourceStore.setState({ sources: design.sources, relations: design.relations });
-    usePageSearchStore.getState().setConfig(design.search);
-    useInteractionStore.getState().setInteractions(design.interactions ?? []);
-    useSuggestionStore.getState().setDismissedIds(design.dismissedSuggestions ?? []);
-    clearComponentRef();
-    queueMicrotask(() => {
-      if (!cancelled) setReady(true);
-    });
-
-    return () => {
-      cancelled = true;
-      useDataSourceRuntimeStore.getState().resetAll();
-      usePageDataStore.getState().resetData();
-      usePageSearchStore.getState().setConfig(null);
-      useInteractionStore.getState().setInteractions([]);
-      useSuggestionStore.getState().setDismissedIds([]);
-      clearComponentRef();
-    };
-  }, [pageId]);
-
-  useLayoutEffect(() => {
-    const componentStore = useComponetsStore.getState();
-    componentStore.setMode(view);
-    if (view === "preview") componentStore.setCurComponentId(null);
-
-    const pageDataStore = usePageDataStore.getState();
-    pageDataStore.resetData();
-    pageDataStore.mergeData(getVariablesDefaultData(useVariablesStore.getState().variables));
-    useDataSourceRuntimeStore.getState().resetAll();
-  }, [view]);
 
   if (!page) {
     return (
@@ -87,14 +28,9 @@ export default function EditorPage({ pageId, view, fromEdit }: EditorPageProps) 
     );
   }
 
-  if (!ready) {
-    return (
-      <div className="flex h-screen items-center justify-center gap-2">
-        <Spinner />
-        <span className="text-sm text-muted-foreground">加载中...</span>
-      </div>
-    );
-  }
-
-  return <Layout pageId={pageId} pageName={page.name} view={view} fromEdit={fromEdit} />;
+  return (
+    <PageProvider key={`${pageId}:${view}`} pageId={pageId} view={view} design={page}>
+      <Layout pageId={pageId} pageName={page.name} view={view} fromEdit={fromEdit} />
+    </PageProvider>
+  );
 }

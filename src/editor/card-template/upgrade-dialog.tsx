@@ -69,7 +69,7 @@ export default function CardUpgradeDialog({ open, onClose }: CardUpgradeDialogPr
                 <div className="min-w-0">
                   <div className="truncate text-sm font-medium">{candidate.template.name}</div>
                   <div className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">
-                    {candidate.scopeId}
+                    #{candidate.componentId}
                   </div>
                 </div>
                 <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">

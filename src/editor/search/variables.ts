@@ -1,4 +1,6 @@
-import { useVariablesStore, type VariableType } from "../stores/variable";
+import type { StoreApi } from "zustand/vanilla";
+
+import type { VariablesStore, VariableType } from "../page-store/stores/variables";
 import { toSearchKey } from "./targets";
 import type { PageSearchConfig, SearchControl } from "./types";
 
@@ -18,19 +20,25 @@ function defaultValue(control: SearchControl) {
  * 把搜索区字段同步为 scope = search 的只读变量：
  * 变量面板可见但不可编辑，事件流与属性绑定仍可正常使用
  */
-export function syncSearchVariables(config: PageSearchConfig | null) {
+export function syncSearchVariables(
+  variablesApi: StoreApi<VariablesStore>,
+  config: PageSearchConfig | null,
+) {
   const fields = [...(config?.fields ?? [])].sort((left, right) => left.order - right.order);
-  if (!fields.length) return;
+  const { variables, setVariables } = variablesApi.getState();
+  const names = new Set(fields.map((field) => `search.${toSearchKey(field.variable)}`));
 
-  const { variables, setVariables } = useVariablesStore.getState();
-  const next = variables.map((variable) => ({ ...variable }));
+  // 配置被删除、字段被移除或页面卸载时，一并清理不再存在的搜索变量
+  const next = variables
+    .filter((variable) => variable.scope !== "search" || names.has(variable.name))
+    .map((variable) => ({ ...variable }));
+  let changed = next.length !== variables.length;
+
   const indexByName = new Map<string, number>();
 
   next.forEach((variable, index) => {
     if (!indexByName.has(variable.name)) indexByName.set(variable.name, index);
   });
-
-  let changed = false;
 
   fields.forEach((field) => {
     const key = toSearchKey(field.variable);

@@ -9,7 +9,7 @@ import { normalizeVariable, type Variable, type VariableInput } from "./variable
 
 const PAGES_STORAGE_KEY = "lowcode-pages";
 
-export const PAGE_SCHEMA_VERSION = 2;
+export const PAGE_SCHEMA_VERSION = 4;
 
 export interface PageDesign {
   schemaVersion: typeof PAGE_SCHEMA_VERSION;
@@ -66,6 +66,151 @@ function normalizeVariables(variables: unknown): Variable[] {
   return (variables as VariableInput[]).map(normalizeVariable);
 }
 
+/**
+ * v2 → v3：卡片实例标识由 scopeId 更名为 instanceId，兼容旧节点数据
+ */
+function migrateComponentInstances(components: Component[]): Component[] {
+  return components.map((component) => {
+    const props = component.props ?? {};
+    let nextProps = props;
+
+    if ("scopeId" in props) {
+      const rest = { ...props };
+      const legacy = rest.scopeId;
+      delete rest.scopeId;
+      rest.instanceId = rest.instanceId ?? legacy;
+      nextProps = rest;
+    }
+
+    return {
+      ...component,
+      props: nextProps,
+      children: Array.isArray(component.children)
+        ? migrateComponentInstances(component.children)
+        : component.children,
+    };
+  });
+}
+
+/**
+ * v3 → v4：收集卡片实例旧字符串标识（instanceId）到页面组件 id 的映射
+ */
+function collectInstanceComponentIds(components: Component[]): Map<string, number> {
+  const mapping = new Map<string, number>();
+
+  const walk = (nodes: Component[]) => {
+    nodes.forEach((component) => {
+      const props = (component.props ?? {}) as Record<string, any>;
+      if (typeof props.instanceId === "string" && props.instanceId) {
+        mapping.set(props.instanceId, component.id);
+      }
+      if (component.children?.length) walk(component.children);
+    });
+  };
+
+  walk(components);
+  return mapping;
+}
+
+/**
+ * v3 → v4：删除组件 props 上的 instanceId，实例标识统一使用 Component.id
+ */
+function stripComponentInstanceIds(components: Component[]): Component[] {
+  return components.map((component) => {
+    const props = { ...((component.props ?? {}) as Record<string, any>) };
+    delete props.instanceId;
+
+    return {
+      ...component,
+      props,
+      children: Array.isArray(component.children)
+        ? stripComponentInstanceIds(component.children)
+        : component.children,
+    };
+  });
+}
+
+function migrateInteractionAction(
+  action: PageInteraction["actions"][number],
+  instanceComponentIds: Map<string, number>,
+): PageInteraction["actions"][number] | undefined {
+  if (action.type === "set-variable") return action;
+
+  const next = { ...action } as Record<string, any>;
+  const componentId =
+    typeof next.targetComponentId === "number"
+      ? next.targetComponentId
+      : instanceComponentIds.get(next.targetInstanceId ?? next.targetScopeId);
+
+  delete next.targetScopeId;
+  delete next.targetInstanceId;
+
+  if (componentId === undefined) return undefined;
+
+  next.targetComponentId = componentId;
+  return next as PageInteraction["actions"][number];
+}
+
+function migrateInteraction(
+  interaction: PageInteraction,
+  instanceComponentIds: Map<string, number>,
+): PageInteraction | undefined {
+  const trigger = { ...interaction.trigger } as Record<string, any>;
+  const componentId =
+    typeof trigger.componentId === "number"
+      ? trigger.componentId
+      : instanceComponentIds.get(trigger.instanceId ?? trigger.scopeId);
+
+  delete trigger.scopeId;
+  delete trigger.instanceId;
+
+  if (componentId === undefined) return undefined;
+
+  trigger.componentId = componentId;
+
+  return {
+    ...interaction,
+    trigger: trigger as PageInteraction["trigger"],
+    actions: interaction.actions
+      .map((action) => migrateInteractionAction(action, instanceComponentIds))
+      .filter((action): action is PageInteraction["actions"][number] => Boolean(action)),
+  };
+}
+
+function migrateSearchTarget(
+  target: PageSearchConfig["targets"][number],
+  instanceComponentIds: Map<string, number>,
+): PageSearchConfig["targets"][number] | undefined {
+  if (target.kind !== "card") return target;
+
+  const next = { ...target } as Record<string, any>;
+  const componentId =
+    typeof next.componentId === "number"
+      ? next.componentId
+      : instanceComponentIds.get(next.instanceId ?? next.scopeId);
+
+  delete next.scopeId;
+  delete next.instanceId;
+
+  if (componentId === undefined) return undefined;
+
+  next.componentId = componentId;
+  return next as PageSearchConfig["targets"][number];
+}
+
+function migrateSearch(
+  search: PageSearchConfig | undefined,
+  instanceComponentIds: Map<string, number>,
+): PageSearchConfig | undefined {
+  if (!search || !Array.isArray(search.targets)) return search;
+
+  const targets = search.targets
+    .map((target) => migrateSearchTarget(target, instanceComponentIds))
+    .filter((target): target is PageSearchConfig["targets"][number] => Boolean(target));
+
+  return { ...search, targets };
+}
+
 function createInitialPage(): PageRecord {
   const now = new Date().toISOString();
   const sample = createSamplePageData();
@@ -83,7 +228,7 @@ function createInitialPage(): PageRecord {
     createdAt: now,
     updatedAt: now,
     components: Array.isArray(legacyComponents)
-      ? structuredClone(legacyComponents)
+      ? stripComponentInstanceIds(migrateComponentInstances(structuredClone(legacyComponents)))
       : createRootComponents(),
     variables: normalizeVariables(legacyVariables),
     sources: Array.isArray(legacyDataSources?.sources)
@@ -99,16 +244,28 @@ function createInitialPage(): PageRecord {
 
 /**
  * v1 → v2：旧变量补 type / scope，页面补 interactions / dismissedSuggestions
+ * v2 → v3：卡片实例标识 scopeId 更名为 instanceId
+ * v3 → v4：删除 props.instanceId，实例标识统一使用 Component.id
  */
 function migratePage(page: PageRecord): PageRecord {
+  const normalizedComponents = Array.isArray(page.components)
+    ? migrateComponentInstances(page.components)
+    : [];
+  const instanceComponentIds = collectInstanceComponentIds(normalizedComponents);
+
   return {
     ...page,
     schemaVersion: PAGE_SCHEMA_VERSION,
-    components: Array.isArray(page.components) ? page.components : [],
+    components: stripComponentInstanceIds(normalizedComponents),
     variables: normalizeVariables(page.variables),
     sources: Array.isArray(page.sources) ? page.sources : [],
     relations: Array.isArray(page.relations) ? page.relations : [],
-    interactions: Array.isArray(page.interactions) ? page.interactions : [],
+    interactions: Array.isArray(page.interactions)
+      ? page.interactions
+          .map((interaction) => migrateInteraction(interaction, instanceComponentIds))
+          .filter((interaction): interaction is PageInteraction => Boolean(interaction))
+      : [],
+    search: migrateSearch(page.search, instanceComponentIds),
     dismissedSuggestions: Array.isArray(page.dismissedSuggestions) ? page.dismissedSuggestions : [],
   };
 }

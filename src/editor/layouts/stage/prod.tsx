@@ -1,15 +1,21 @@
 import React from "react";
+import { useContentStore, usePageDataStore, usePageStores } from "../../page-store/contexts";
+import type { Component } from "../../page-store/stores/content";
 import { useComponentConfigStore } from "../../stores/component-config";
-import { setComponentRef } from "../../stores/component-ref";
-import type { Component } from "../../stores/components";
-import { useComponetsStore } from "../../stores/components";
-import { usePageDataStore } from "../../stores/page-data";
-import { execEventFlow } from "../../utils/action";
+import { createPageEventDomain, execEventFlow } from "../../utils/action";
 
 const ProdStage: React.FC = () => {
-  const { components } = useComponetsStore();
+  const { components } = useContentStore();
   const { data } = usePageDataStore();
   const { componentConfig } = useComponentConfigStore();
+  const { pageData, refs } = usePageStores();
+
+  const domain = React.useMemo(() => createPageEventDomain(pageData, refs), [pageData, refs]);
+  const runEventFlow = React.useMemo(
+    () => (nodes: any, eventData?: any, initEventData?: any) =>
+      execEventFlow(nodes, eventData, initEventData, domain),
+    [domain],
+  );
 
   // 处理组件props
   function formatProps(component: Component) {
@@ -50,8 +56,9 @@ const ProdStage: React.FC = () => {
 
       if (eventConfig) {
         props[event.name] = (params: any) => {
-          eventConfig.children && execEventFlow(eventConfig.children, params, params);
-          return;
+          if (eventConfig.children) {
+            runEventFlow(eventConfig.children, params, params);
+          }
         };
       }
     });
@@ -87,9 +94,9 @@ const ProdStage: React.FC = () => {
           key: component.id,
           _id: component.id,
           _name: component.name,
-          _execEventFlow: execEventFlow,
+          _execEventFlow: runEventFlow,
           ref: (ref) => {
-            setComponentRef(component.id, ref);
+            refs.set(component.id, ref);
           },
           ...component.props,
           ...props,
