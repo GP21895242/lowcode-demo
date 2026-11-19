@@ -1,14 +1,14 @@
 import { useState } from "react";
 
-import { Field } from "../../../components/form";
-import { Button } from "../../../components/ui/button";
+import { Field } from "@/components/form";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../../components/ui/select";
+} from "@/components/ui/select";
 import { DataSourceSelect } from "../../data-source/components/data-source-select";
 import { useDataSourceFields } from "../../data-source/hooks";
 import { ItemType } from "../../item-type";

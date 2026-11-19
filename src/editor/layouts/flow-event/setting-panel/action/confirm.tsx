@@ -1,5 +1,5 @@
-﻿import { Field } from "../../../../../components/form";
-import { Input } from "../../../../../components/ui/input";
+﻿import { Field } from "@/components/form";
+import { Input } from "@/components/ui/input";
 
 const ConfirmSetting = () => {
   return (

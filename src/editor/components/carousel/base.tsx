@@ -7,8 +7,8 @@ import {
   CarouselNext,
   CarouselPrevious,
   type CarouselApi,
-} from "../../../components/ui/carousel";
-import { cn } from "../../../lib/utils";
+} from "@/components/ui/carousel";
+import { cn } from "@/lib/utils";
 import type { CommonComponentProps } from "../../interface";
 
 interface CarouselBaseProps extends CommonComponentProps {

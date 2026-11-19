@@ -1,8 +1,8 @@
 import { Settings } from "lucide-react";
 import { useState } from "react";
 
-import { Checkbox } from "../../../components/ui/checkbox";
-import { cn } from "../../../lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 import SelectVariableModal from "../select-variable-modal";
 
 interface Value {

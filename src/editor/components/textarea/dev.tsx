@@ -1,4 +1,4 @@
-import { Textarea } from "../../../components/ui/textarea";
+import { Textarea } from "@/components/ui/textarea";
 import type { CommonComponentProps } from "../../interface";
 import { toNumber } from "../_shared/control";
 import { FormField } from "../_shared/form-field";

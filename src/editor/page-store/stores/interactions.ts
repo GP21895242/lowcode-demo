@@ -1,6 +1,6 @@
 import { createStore, type StoreApi } from "zustand/vanilla";
 
-import { getByPath } from "../../../lib/utils";
+import { getByPath } from "@/lib/utils";
 import type { InteractionAction, PageInteraction } from "../../interaction/types";
 import type { CardRegistry } from "./cards";
 import type { PageDataStore } from "./page-data";

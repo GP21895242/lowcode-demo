@@ -1,4 +1,4 @@
-import { Checkbox } from "../../../components/ui/checkbox";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { CommonComponentProps } from "../../interface";
 import { normalizeOptions } from "../form-item/options";
 import { toStringList } from "../_shared/control";

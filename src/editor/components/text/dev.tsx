@@ -1,6 +1,6 @@
 import React from "react";
 
-import { cn } from "../../../lib/utils";
+import { cn } from "@/lib/utils";
 import type { CommonComponentProps } from "../../interface";
 
 const VARIANTS: Record<string, { tag: keyof React.JSX.IntrinsicElements; className: string }> = {

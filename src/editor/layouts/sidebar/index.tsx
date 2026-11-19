@@ -1,7 +1,7 @@
 import { Blocks, Braces, Database, ListTree, Workflow } from "lucide-react";
 import { useState } from "react";
 
-import { cn } from "../../../lib/utils";
+import { cn } from "@/lib/utils";
 import InteractionSettingPanel from "../../interaction/setting-panel";
 import Material from "../material";
 import DataSources from "./data-sources";

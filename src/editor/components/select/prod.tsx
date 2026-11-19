@@ -6,7 +6,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../../components/ui/select";
+} from "@/components/ui/select";
 import type { CommonComponentProps } from "../../interface";
 import { normalizeOptions } from "../form-item/options";
 import { toBoolean } from "../_shared/control";

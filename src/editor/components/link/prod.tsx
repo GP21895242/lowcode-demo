@@ -1,6 +1,6 @@
 import { forwardRef } from "react";
 
-import { cn } from "../../../lib/utils";
+import { cn } from "@/lib/utils";
 import type { CommonComponentProps } from "../../interface";
 
 const UNDERLINE_CLASS: Record<string, string> = {

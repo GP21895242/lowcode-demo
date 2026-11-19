@@ -1,14 +1,8 @@
 import { Pencil } from "lucide-react";
 import { useState } from "react";
 
-import { Button } from "../../../components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../../../components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import CardTemplateEditor from "../../card-template/editor";
 import { openCardTemplateDesign } from "../../card-template/navigation";
 import { useCardTemplate } from "../../card-template/store";

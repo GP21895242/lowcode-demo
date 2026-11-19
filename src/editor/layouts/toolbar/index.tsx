@@ -1,9 +1,9 @@
 import { ArrowLeft, CircleArrowUp, Pencil, Play, Save, Sparkles, Waypoints } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { Button } from "../../../components/ui/button";
-import { toast } from "../../../components/ui/toast";
-import AppHeader, { type AppBreadcrumbItem } from "../../../pages/app-header";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/toast";
+import AppHeader, { type AppBreadcrumbItem } from "@/pages/app-header";
 import CardTemplateEditor from "../../card-template/editor";
 import { useCardTemplatesStore } from "../../card-template/store";
 import CardUpgradeDialog from "../../card-template/upgrade-dialog";

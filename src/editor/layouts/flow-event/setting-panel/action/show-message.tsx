@@ -1,12 +1,12 @@
-﻿import { Field } from "../../../../../components/form";
-import { Input } from "../../../../../components/ui/input";
+﻿import { Field } from "@/components/form";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../../../../components/ui/select";
+} from "@/components/ui/select";
 
 const typeOptions = [
   { label: "成功", value: "success" },

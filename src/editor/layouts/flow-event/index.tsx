@@ -8,15 +8,9 @@ import React, {
   useState,
 } from "react";
 
-import { Button } from "../../../components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "../../../components/ui/sheet";
-import { cloneDeep } from "../../../lib/utils";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { cloneDeep } from "@/lib/utils";
 import ContextMenu from "./context-menu";
 import { data } from "./data";
 import type { Menu, Node } from "./data";

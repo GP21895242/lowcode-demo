@@ -5,15 +5,9 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "../../../components/ui/accordion";
-import { Button } from "../../../components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "../../../components/ui/sheet";
+} from "@/components/ui/accordion";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useCardTemplate } from "../../card-template/store";
 import { ItemType } from "../../item-type";
 import { useComponentConfigStore } from "../../stores/component-config";

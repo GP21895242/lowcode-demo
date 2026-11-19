@@ -1,8 +1,8 @@
 import { Settings } from "lucide-react";
 import { useState } from "react";
 
-import { Switch } from "../../../components/ui/switch";
-import { cn } from "../../../lib/utils";
+import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 import SelectVariableModal from "../select-variable-modal";
 
 interface Value {

@@ -1,7 +1,7 @@
 import { Pencil } from "lucide-react";
 
-import { Button } from "../../../components/ui/button";
-import AppHeader, { type AppBreadcrumbItem } from "../../../pages/app-header";
+import { Button } from "@/components/ui/button";
+import AppHeader, { type AppBreadcrumbItem } from "@/pages/app-header";
 
 interface PreviewToolbarProps {
   pageId?: string;

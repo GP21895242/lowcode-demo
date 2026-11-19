@@ -49,6 +49,12 @@ release. Add a tool name to select part of the graph. For example, run
 - `src/components/ui/` 下由 shadcn 生成的组件与目录属于生成产物：没有用户的明确指令，不得修改、删除、重命名或重写其内容（含格式化、import 路径调整）。
 - 若确实需要调整生成组件，须先向用户说明原因并取得明确同意；能通过主题变量、`components.json` 或调用方 `className` 解决时，优先在生成文件之外处理。
 
+## 路径别名与导入规范
+
+- 项目已配置 `@/*` 路径别名指向 `src/`，统一维护在 `tsconfig.json`、`tsconfig.app.json`、`vite.config.ts` 与 `components.json`；新增或调整别名时需同步更新这几处。
+- 相对路径引用达到三层（`../../../`）及以上时，必须改用 `@/` 别名导入，例如 `@/components/ui/button`、`@/lib/utils`、`@/editor/stores/components`。
+- 一层至两层的相对导入（`./`、`../`、`../../`）保持不变。
+
 ## Others
 
 Please use chinese as default language for communication。

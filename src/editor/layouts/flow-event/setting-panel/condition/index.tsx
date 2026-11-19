@@ -1,17 +1,17 @@
 ﻿import { Plus, Settings } from "lucide-react";
 import { forwardRef, useImperativeHandle, useState } from "react";
 
-import { Button } from "../../../../../components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "../../../../../components/ui/dialog";
-import { Input } from "../../../../../components/ui/input";
-import { Textarea } from "../../../../../components/ui/textarea";
-import { cn } from "../../../../../lib/utils";
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import type { SettingPanelProps } from "../../data";
 
 const DEFAULT_CONDITION = `(function(ctx) { \n\n })(ctx)`;

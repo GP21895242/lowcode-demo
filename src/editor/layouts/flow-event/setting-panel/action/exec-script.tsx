@@ -1,7 +1,7 @@
 ﻿import { useEffect } from "react";
 
-import { Field, useAppFormContext } from "../../../../../components/form";
-import { Textarea } from "../../../../../components/ui/textarea";
+import { Field, useAppFormContext } from "@/components/form";
+import { Textarea } from "@/components/ui/textarea";
 
 const DEFAULT_SCRIPT = `(function (ctx) {
   // TODO

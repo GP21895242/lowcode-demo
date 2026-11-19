@@ -15,8 +15,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "../../../components/ui/table";
-import { formatDate, getByPath } from "../../../lib/utils";
+} from "@/components/ui/table";
+import { formatDate, getByPath } from "@/lib/utils";
 import { useDataSource, useDataSourceFields } from "../../data-source/hooks";
 import type { DataSourceBinding } from "../../data-source/types";
 import type { CommonComponentProps } from "../../interface";

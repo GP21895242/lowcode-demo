@@ -7,8 +7,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "../../../components/ui/table";
-import { getByPath } from "../../../lib/utils";
+} from "@/components/ui/table";
+import { getByPath } from "@/lib/utils";
 import { useDataSource, useDataSourceFields } from "../../data-source/hooks";
 import type { DataSourceBinding } from "../../data-source/types";
 import { useDrop } from "../../hooks/use-drop";

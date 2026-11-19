@@ -4,7 +4,7 @@ import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { useMemo } from "react";
 
-import { getByPath } from "../../../lib/utils";
+import { getByPath } from "@/lib/utils";
 
 export interface ChartRow {
   label: string;

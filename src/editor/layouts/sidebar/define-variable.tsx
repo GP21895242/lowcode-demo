@@ -1,23 +1,23 @@
 import { Plus, Trash2 } from "lucide-react";
 import React, { useEffect, useMemo } from "react";
 
-import { AppForm, Field, FieldArray, useAppForm } from "../../../components/form";
-import { Button } from "../../../components/ui/button";
+import { AppForm, Field, FieldArray, useAppForm } from "@/components/form";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "../../../components/ui/dialog";
-import { Input } from "../../../components/ui/input";
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../../components/ui/select";
+} from "@/components/ui/select";
 import { useVariablesStore, type Variable } from "../../stores/variable";
 
 interface Props {

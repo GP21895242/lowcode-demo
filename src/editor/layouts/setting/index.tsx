@@ -1,7 +1,7 @@
 import { MousePointer2 } from "lucide-react";
 import { useState } from "react";
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useComponentConfigStore } from "../../stores/component-config";
 import { useComponetsStore } from "../../stores/components";
 import ComponentAttr from "./attr";

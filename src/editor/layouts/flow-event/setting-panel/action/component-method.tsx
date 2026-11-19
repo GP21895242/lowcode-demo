@@ -1,8 +1,8 @@
 import { Check, ChevronsUpDown } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { Field, useFieldValue } from "../../../../../components/form";
-import { Button } from "../../../../../components/ui/button";
+import { Field, useFieldValue } from "@/components/form";
+import { Button } from "@/components/ui/button";
 import {
   Command,
   CommandEmpty,
@@ -10,20 +10,20 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "../../../../../components/ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "../../../../../components/ui/popover";
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../../../../components/ui/select";
-import { useCardTemplate } from "../../../../card-template/store";
-import { ItemType } from "../../../../item-type";
-import { useComponentConfigStore } from "../../../../stores/component-config";
-import { useComponetsStore } from "../../../../stores/components";
-import { getComponentById } from "../../../../utils/utils";
+} from "@/components/ui/select";
+import { useCardTemplate } from "@/editor/card-template/store";
+import { ItemType } from "@/editor/item-type";
+import { useComponentConfigStore } from "@/editor/stores/component-config";
+import { useComponetsStore } from "@/editor/stores/components";
+import { getComponentById } from "@/editor/utils/utils";
 
 interface FlatComponent {
   value: number;

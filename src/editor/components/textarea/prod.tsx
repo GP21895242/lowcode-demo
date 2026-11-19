@@ -1,6 +1,6 @@
 import { forwardRef } from "react";
 
-import { Textarea } from "../../../components/ui/textarea";
+import { Textarea } from "@/components/ui/textarea";
 import type { CommonComponentProps } from "../../interface";
 import { toBoolean, toNumber } from "../_shared/control";
 import { FormField } from "../_shared/form-field";

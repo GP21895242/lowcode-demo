@@ -1,11 +1,11 @@
-import { Field } from "../../../components/form";
+import { Field } from "@/components/form";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../../components/ui/select";
+} from "@/components/ui/select";
 import SettingFormItemInput from "../../common/setting-form-item/input";
 
 const LABEL_POSITION_OPTIONS = [

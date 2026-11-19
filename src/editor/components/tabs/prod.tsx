@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { CommonComponentProps } from "../../interface";
 
 interface TabItem {

@@ -1,7 +1,7 @@
 ﻿import { Loader2 } from "lucide-react";
 import { forwardRef, useImperativeHandle, useState } from "react";
 
-import { Button } from "../../../components/ui/button";
+import { Button } from "@/components/ui/button";
 import type { CommonComponentProps } from "../../interface";
 
 const OMIT_KEYS = ["_id", "_name", "_desc", "_execEventFlow", "type", "text", "children"];

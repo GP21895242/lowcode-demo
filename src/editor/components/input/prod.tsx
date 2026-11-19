@@ -1,6 +1,6 @@
 import { forwardRef } from "react";
 
-import { Input } from "../../../components/ui/input";
+import { Input } from "@/components/ui/input";
 import type { CommonComponentProps } from "../../interface";
 import { toBoolean } from "../_shared/control";
 import { FormField } from "../_shared/form-field";

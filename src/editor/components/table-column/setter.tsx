@@ -1,17 +1,11 @@
 import { Settings } from "lucide-react";
 import { useRef, useState } from "react";
 
-import { Field, useFieldValue } from "../../../components/form";
-import { Button } from "../../../components/ui/button";
-import { Input } from "../../../components/ui/input";
-import {
-  Sheet,
-  SheetContent,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "../../../components/ui/sheet";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../../../components/ui/tooltip";
+import { Field, useFieldValue } from "@/components/form";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import CommonSetter from "../../common/common-setter";
 import SortableList from "../../common/sortable-list";
 import { FieldSelect } from "../../data-source/components/field-select";

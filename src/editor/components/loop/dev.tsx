@@ -1,7 +1,7 @@
 import { Repeat } from "lucide-react";
 import React from "react";
 
-import { cn } from "../../../lib/utils";
+import { cn } from "@/lib/utils";
 import { useDrop } from "../../hooks/use-drop";
 import type { CommonComponentProps } from "../../interface";
 

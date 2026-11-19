@@ -1,8 +1,8 @@
 import { Settings } from "lucide-react";
 import { useState } from "react";
 
-import { Input } from "../../../components/ui/input";
-import { cn } from "../../../lib/utils";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import SelectVariableModal from "../select-variable-modal";
 
 interface Value {

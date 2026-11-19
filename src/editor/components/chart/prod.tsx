@@ -1,4 +1,4 @@
-import { getByPath } from "../../../lib/utils";
+import { getByPath } from "@/lib/utils";
 import { useDataSource, useDataSourceFields } from "../../data-source/hooks";
 import type { DataSourceBinding } from "../../data-source/types";
 import type { CommonComponentProps } from "../../interface";

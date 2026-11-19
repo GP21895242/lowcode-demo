@@ -1,15 +1,15 @@
 import React, { useEffect, useMemo } from "react";
 
-import { AppForm, DatePicker, Field, useAppForm } from "../../../components/form";
-import { Button } from "../../../components/ui/button";
-import { Input } from "../../../components/ui/input";
+import { AppForm, DatePicker, Field, useAppForm } from "@/components/form";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../../components/ui/select";
+} from "@/components/ui/select";
 import {
   useDataSourcesStore,
   usePageDataStore,

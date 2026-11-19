@@ -1,6 +1,6 @@
 import { forwardRef } from "react";
 
-import { Switch } from "../../../components/ui/switch";
+import { Switch } from "@/components/ui/switch";
 import type { CommonComponentProps } from "../../interface";
 import { toBoolean } from "../_shared/control";
 import { FormField } from "../_shared/form-field";

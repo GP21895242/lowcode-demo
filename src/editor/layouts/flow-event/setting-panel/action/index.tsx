@@ -1,14 +1,14 @@
 ﻿import React, { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 
-import { AppForm, useAppForm, useWatchValue } from "../../../../../components/form";
-import { Field } from "../../../../../components/form";
+import { AppForm, useAppForm, useWatchValue } from "@/components/form";
+import { Field } from "@/components/form";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../../../../components/ui/select";
+} from "@/components/ui/select";
 import type { SettingPanelProps } from "../../data";
 import AsyncTaskSetting from "./async-task";
 import ComponentMethodSetting from "./component-method";

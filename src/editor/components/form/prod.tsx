@@ -1,20 +1,20 @@
 ﻿import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from "react";
 
-import { AppForm, DatePicker, Field, useAppForm } from "../../../components/form";
-import { Checkbox } from "../../../components/ui/checkbox";
-import { Input } from "../../../components/ui/input";
-import { Label } from "../../../components/ui/label";
-import { RadioGroup, RadioGroupItem } from "../../../components/ui/radio-group";
+import { AppForm, DatePicker, Field, useAppForm } from "@/components/form";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../../components/ui/select";
-import { Textarea } from "../../../components/ui/textarea";
-import { toast } from "../../../components/ui/toast";
-import { formatDate } from "../../../lib/utils";
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/components/ui/toast";
+import { formatDate } from "@/lib/utils";
 import type { CommonComponentProps } from "../../interface";
 import { normalizeOptions } from "../form-item/options";
 

@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useRef } from "react";
 
-import { AppForm, useAppForm } from "../../../components/form";
-import { Input } from "../../../components/ui/input";
-import { Label } from "../../../components/ui/label";
+import { AppForm, useAppForm } from "@/components/form";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import CommonSetter from "../../common/common-setter";
 import SettingFormItemSwitch from "../../common/setting-form-item/switch";
 import {

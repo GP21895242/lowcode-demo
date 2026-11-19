@@ -1,13 +1,13 @@
 ﻿import { forwardRef, useImperativeHandle, useState } from "react";
 
-import { Button } from "../../../components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "../../../components/ui/dialog";
+} from "@/components/ui/dialog";
 import type { CommonComponentProps } from "../../interface";
 
 function ModalProd({ children, title, onOk, onCancel }: CommonComponentProps, ref: any) {

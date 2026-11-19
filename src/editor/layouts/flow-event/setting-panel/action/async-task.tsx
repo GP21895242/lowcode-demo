@@ -1,13 +1,13 @@
-﻿import { Field, useFieldValue } from "../../../../../components/form";
-import { Input } from "../../../../../components/ui/input";
+﻿import { Field, useFieldValue } from "@/components/form";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../../../../components/ui/select";
-import { useVariablesStore } from "../../../../stores/variable";
+} from "@/components/ui/select";
+import { useVariablesStore } from "@/editor/stores/variable";
 
 const AsyncTaskSetting = () => {
   const { variables } = useVariablesStore();

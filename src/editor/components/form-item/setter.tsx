@@ -1,13 +1,13 @@
-import { Field, useFieldValue } from "../../../components/form";
-import { Button } from "../../../components/ui/button";
-import { Input } from "../../../components/ui/input";
+import { Field, useFieldValue } from "@/components/form";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../../components/ui/select";
+} from "@/components/ui/select";
 import SettingFormItemInput from "../../common/setting-form-item/input";
 import SortableList from "../../common/sortable-list";
 import type { FormOption } from "./options";
