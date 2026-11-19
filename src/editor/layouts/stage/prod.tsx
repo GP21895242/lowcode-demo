@@ -2,6 +2,9 @@ import React from "react";
 import { useContentStore, usePageDataStore, usePageStores } from "../../page-store/contexts";
 import type { Component } from "../../page-store/stores/content";
 import { useComponentConfigStore } from "../../stores/component-config";
+import { expandComponents } from "../../loop/expand";
+import { useLoopRows } from "../../loop/rows";
+import { collectLoopSourceIds, type RowScope } from "../../loop/scope";
 import { createPageEventDomain, execEventFlow } from "../../utils/action";
 
 const ProdStage: React.FC = () => {
@@ -17,8 +20,24 @@ const ProdStage: React.FC = () => {
     [domain],
   );
 
+  const loopSourceIds = React.useMemo(() => collectLoopSourceIds(components), [components]);
+  const loopRows = useLoopRows(loopSourceIds);
+  const getLoopRows = React.useCallback(
+    (sourceId: string) => loopRows.get(sourceId) ?? [],
+    [loopRows],
+  );
+
+  /** 变量取值：循环行内优先取行作用域，否则回退页面数据 */
+  function readValue(name: string, scope?: RowScope) {
+    if (scope && Object.prototype.hasOwnProperty.call(scope, name)) {
+      return scope[name];
+    }
+
+    return data[name];
+  }
+
   // 处理组件props
-  function formatProps(component: Component) {
+  function formatProps(component: Component, scope?: RowScope) {
     const props = Object.keys(component.props || {}).reduce<any>((prev, cur) => {
       // 如果组件属性是对象，则判断是静态值还是变量
       if (typeof component.props[cur] === "object") {
@@ -27,8 +46,8 @@ const ProdStage: React.FC = () => {
           prev[cur] = component.props[cur].value;
         } else if (component.props[cur]?.type === "variable") {
           const variableName = component.props[cur].value;
-          // 如果data中有值，则取data中的值。否则取变量的默认值
-          prev[cur] = data[variableName];
+          // 行作用域优先，其次取页面数据；两者都没有时保持 undefined
+          prev[cur] = readValue(variableName, scope);
         } else if (component.props[cur]?.type === "dataSource") {
           prev[cur] = component.props[cur].value;
         }
@@ -39,6 +58,18 @@ const ProdStage: React.FC = () => {
       return prev;
     }, {});
     return props;
+  }
+
+  function isHidden(component: Component, scope?: RowScope) {
+    if (component.hidden?.type === "static" && component.hidden?.value) {
+      return true;
+    }
+
+    return (
+      component.hidden?.type === "variable" &&
+      !!component.hidden?.value &&
+      readValue(component.hidden.value, scope) === true
+    );
   }
 
   // 处理事件
@@ -66,42 +97,41 @@ const ProdStage: React.FC = () => {
     return props;
   }
 
-  function renderComponents(components: Component[]): React.ReactNode {
-    return components.map((component: Component) => {
+  function renderComponents(
+    components: Component[],
+    scope?: RowScope,
+    keyPrefix = "",
+  ): React.ReactNode {
+    return expandComponents(components, { scope, keyPrefix, getRows: getLoopRows }).map((node) => {
+      const component = node.component;
+
       if (!componentConfig[component.name]?.prod) {
         return null;
       }
 
-      if (component.hidden?.type === "static" && component.hidden?.value) {
+      if (isHidden(component, node.scope)) {
         return null;
       }
 
-      if (
-        component.hidden?.type === "variable" &&
-        component.hidden?.value &&
-        data[component.hidden.value] === true
-      ) {
-        return null;
-      }
-
-      let props = formatProps(component);
+      let props = formatProps(component, node.scope);
 
       props = { ...props, ...handleEvent(component) };
 
       return React.createElement(
         componentConfig[component.name]?.prod,
         {
-          key: component.id,
-          _id: component.id,
+          key: node.key,
+          _id: node.runtimeId,
           _name: component.name,
           _execEventFlow: runEventFlow,
           ref: (ref) => {
-            refs.set(component.id, ref);
+            refs.set(node.runtimeId, ref);
           },
           ...component.props,
           ...props,
         },
-        component.props.children || renderComponents(component.children || []),
+        component.props.children ||
+          renderComponents(component.children || [], node.scope, `${node.key}/`),
       );
     });
   }

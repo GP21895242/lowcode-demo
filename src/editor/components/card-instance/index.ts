@@ -26,6 +26,7 @@ export default function registerCardInstanceComponent(ctx: Context) {
       ItemType.Card,
       ItemType.TabPane,
       ItemType.Carousel,
+      ItemType.Loop,
       ItemType.GridLayout,
     ],
   });

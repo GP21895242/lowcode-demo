@@ -27,6 +27,7 @@ export default (ctx: Context) => {
       ItemType.Card,
       ItemType.Modal,
       ItemType.TabPane,
+      ItemType.Loop,
       ItemType.GridLayout,
     ],
   });

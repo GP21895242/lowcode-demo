@@ -38,6 +38,7 @@ const REQUIRED = [
   ItemType.Tabs,
   ItemType.TabPane,
   ItemType.Carousel,
+  ItemType.Loop,
   ItemType.Chart,
   ItemType.GridLayout,
   ItemType.SearchForm,

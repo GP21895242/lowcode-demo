@@ -1,7 +1,10 @@
 import React from "react";
-import { useComponentConfigStore } from "../stores/component-config";
 import type { Component } from "../stores/components";
+import { useComponentConfigStore } from "../stores/component-config";
 import { execEventFlow } from "../utils/action";
+import { expandComponents } from "../loop/expand";
+import { useLoopRows } from "../loop/rows";
+import { collectLoopSourceIds, type RowScope } from "../loop/scope";
 import { useCardRuntime } from "./runtime-context";
 
 interface CardInternalRendererProps {
@@ -24,7 +27,22 @@ export default function CardInternalRenderer({ readonly = false }: CardInternalR
     [domain],
   );
 
-  function formatProps(component: Component) {
+  const loopSourceIds = React.useMemo(() => collectLoopSourceIds([expanded.root]), [expanded.root]);
+  const loopRows = useLoopRows(loopSourceIds);
+  const getLoopRows = React.useCallback(
+    (sourceId: string) => loopRows.get(sourceId) ?? [],
+    [loopRows],
+  );
+
+  function readValue(name: string, scope?: RowScope) {
+    if (scope && Object.prototype.hasOwnProperty.call(scope, name)) {
+      return scope[name];
+    }
+
+    return getData(name);
+  }
+
+  function formatProps(component: Component, scope?: RowScope) {
     return Object.keys(component.props || {}).reduce<Record<string, any>>((prev, key) => {
       const value = component.props[key];
 
@@ -32,7 +50,7 @@ export default function CardInternalRenderer({ readonly = false }: CardInternalR
         if (value.type === "static") {
           prev[key] = value.value;
         } else if (value.type === "variable") {
-          prev[key] = getData(value.value);
+          prev[key] = readValue(value.value, scope);
         } else if (value.type === "dataSource") {
           // 保留 $slot 占位，由数据源 hook 在卡片上下文中解析真实作用域
           prev[key] = value.value;
@@ -66,51 +84,57 @@ export default function CardInternalRenderer({ readonly = false }: CardInternalR
     }, {});
   }
 
-  function renderComponent(component: Component): React.ReactNode {
-    const config = componentConfig[component.name];
-
-    if (!config?.prod) return null;
-
+  function isHidden(component: Component, scope?: RowScope) {
     if (component.hidden?.type === "static" && component.hidden?.value) {
-      return null;
+      return true;
     }
 
-    if (
+    return (
       component.hidden?.type === "variable" &&
-      component.hidden?.value &&
-      getData(component.hidden.value) === true
-    ) {
-      return null;
-    }
-
-    const props: any = {
-      key: component.id,
-      ...component.props,
-      ...formatProps(component),
-    };
-
-    if (!readonly) {
-      props._id = component.id;
-      props._name = component.name;
-      props._execEventFlow = runFlow;
-      props.ref = (ref: any) => {
-        setComponentRef(component.id, ref);
-      };
-      Object.assign(props, buildEventProps(component, config.events ?? []));
-    }
-
-    const children = component.props?.children ?? renderComponents(component.children ?? []);
-
-    return React.createElement(
-      config.prod,
-      { ...props, ...(propOverrides[component.id] ?? {}) },
-      children,
+      !!component.hidden?.value &&
+      readValue(component.hidden.value, scope) === true
     );
   }
 
-  function renderComponents(components: Component[]): React.ReactNode {
-    return components.map((component) => renderComponent(component));
+  function renderComponents(
+    components: Component[],
+    scope?: RowScope,
+    keyPrefix = "",
+  ): React.ReactNode {
+    return expandComponents(components, { scope, keyPrefix, getRows: getLoopRows }).map((node) => {
+      const component = node.component;
+      const config = componentConfig[component.name];
+
+      if (!config?.prod) return null;
+      if (isHidden(component, node.scope)) return null;
+
+      const props: any = {
+        key: node.key,
+        ...component.props,
+        ...formatProps(component, node.scope),
+      };
+
+      if (!readonly) {
+        props._id = node.runtimeId;
+        props._name = component.name;
+        props._execEventFlow = runFlow;
+        props.ref = (ref: any) => {
+          setComponentRef(node.runtimeId, ref);
+        };
+        Object.assign(props, buildEventProps(component, config.events ?? []));
+      }
+
+      const children =
+        component.props?.children ??
+        renderComponents(component.children ?? [], node.scope, `${node.key}/`);
+
+      return React.createElement(
+        config.prod,
+        { ...props, ...(propOverrides[component.id] ?? {}) },
+        children,
+      );
+    });
   }
 
-  return <>{renderComponent(expanded.root)}</>;
+  return <>{renderComponents([expanded.root])}</>;
 }

@@ -20,6 +20,6 @@ export default (ctx: Context) => {
       },
     ],
     order: 1.4,
-    allowDrag: [ItemType.Tabs],
+    allowDrag: [ItemType.Tabs, ItemType.Loop],
   });
 };

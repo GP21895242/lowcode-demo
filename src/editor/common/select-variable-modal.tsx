@@ -1,4 +1,5 @@
-﻿import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
+﻿import { useMemo } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -7,6 +8,9 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
+import { useDataSourceFields } from "../data-source/hooks";
+import { findNearestLoop, getLoopScopeName, getLoopSourceId } from "../loop/scope";
+import { useComponetsStore } from "../stores/components";
 import { useVariablesStore } from "../stores/variable";
 
 interface Props {
@@ -32,6 +36,28 @@ const columns = [
 
 const SelectVariableModal: React.FC<Props> = ({ open, onCancel, onSelect }) => {
   const { variables } = useVariablesStore();
+  const { curComponentId, components } = useComponetsStore();
+
+  // 选中组件位于循环容器内时，追加「当前行字段」变量
+  const loop = useMemo(
+    () => findNearestLoop(curComponentId, components),
+    [curComponentId, components],
+  );
+  const loopSourceId = loop ? getLoopSourceId(loop) : undefined;
+  const loopFields = useDataSourceFields(loopSourceId);
+
+  const records = useMemo(() => {
+    if (!loop || !loopSourceId) return variables;
+
+    const scopeName = getLoopScopeName(loop);
+    const rowVariables = loopFields.map((field) => ({
+      name: `${scopeName}.${field.dataKey}`,
+      defaultValue: "当前行",
+      remark: `循环行字段 · ${field.label}`,
+    }));
+
+    return [...rowVariables, ...variables];
+  }, [loop, loopFields, loopSourceId, variables]);
 
   function rowSelect(record: any) {
     onSelect(record);
@@ -58,8 +84,8 @@ const SelectVariableModal: React.FC<Props> = ({ open, onCancel, onSelect }) => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {variables.length ? (
-              variables.map((record) => (
+            {records.length ? (
+              records.map((record) => (
                 <TableRow
                   key={record.name}
                   className="cursor-pointer"

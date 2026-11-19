@@ -18,4 +18,5 @@ export const ItemType = {
   Tabs: "Tabs",
   TabPane: "TabPane",
   Carousel: "Carousel",
+  Loop: "Loop",
 };
