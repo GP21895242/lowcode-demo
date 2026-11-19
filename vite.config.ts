@@ -36,13 +36,21 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "html", "lcov"],
-      include: ["src/editor/**/*.{ts,tsx}", "src/lib/**/*.ts"],
-      exclude: ["**/*.test.*", "**/*.dom.test.*", "src/editor/components/ui/**"],
+      include: [
+        "src/editor/page-store/**/*.{ts,tsx}",
+        "src/editor/data-source/**/*.{ts,tsx}",
+        "src/editor/search/**/*.{ts,tsx}",
+        "src/editor/card-template/**/*.{ts,tsx}",
+        "src/editor/utils/**/*.{ts,tsx}",
+        "src/editor/stores/**/*.{ts,tsx}",
+        "src/lib/**/*.ts",
+      ],
+      exclude: ["**/*.test.*", "**/*.dom.test.*"],
       thresholds: {
-        statements: 28,
-        branches: 21,
-        functions: 22,
-        lines: 29,
+        statements: 53,
+        branches: 41,
+        functions: 46,
+        lines: 55,
       },
     },
     projects: [
