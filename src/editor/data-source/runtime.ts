@@ -351,20 +351,14 @@ function createRuntimeActions(deps: RuntimeActionDeps): Action {
         .filter((relation) => relation.enabled && relation.sourceId === sourceId);
 
       for (const relation of linked) {
-        const targetEntry = deps.get().sources[deps.resolveKey(relation.targetId, options)];
-        const filters = { ...(targetEntry?.params.filters ?? {}) };
         const key = relation.paramKey || relation.targetField;
         const value = selection
           ? (getByPath(selection.row, relation.sourceField) ?? selection.value)
           : undefined;
+        const isEmpty = value === undefined || value === null || value === "";
 
-        if (value === undefined || value === null || value === "") {
-          delete filters[key];
-        } else {
-          filters[key] = value;
-        }
-
-        await deps.get().setFilters(relation.targetId, filters, options);
+        // null 表示删除该过滤条件，避免把已有过滤条件整体合并回来
+        await deps.get().setFilters(relation.targetId, { [key]: isEmpty ? null : value }, options);
       }
     },
 

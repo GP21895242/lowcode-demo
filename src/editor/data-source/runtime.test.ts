@@ -217,8 +217,42 @@ describe("数据源运行时隔离与生命周期", () => {
     expect(loader.store.getState().sources.details.params.filters).toEqual({ region: "华东" });
     expect(loader.store.getState().sources.detail_disabled).toBeUndefined();
 
-    await loader.store.getState().setFilters("details", { region: null });
+    // 清空选择时移除关系带来的过滤条件
+    await loader.store.getState().select("orders", null);
     expect(loader.store.getState().sources.details.params.filters).toEqual({});
+  });
+
+  it("清空选择只移除关系字段，保留其他过滤条件", async () => {
+    const relation = (id: string, sourceField: string): DataSourceRelation => ({
+      id,
+      sourceId: "orders",
+      targetId: "details",
+      type: "one-to-many",
+      sourceField,
+      targetField: sourceField,
+      paramKey: sourceField,
+      enabled: true,
+    });
+    const loader = createDataSourceLoader({
+      getSource: (id) => source(id),
+      getRelations: () => [relation("r1", "region"), relation("r2", "status")],
+    });
+
+    await loader.store.getState().setFilters("details", { keep: "1" });
+    await loader.store.getState().select("orders", {
+      value: "华东",
+      row: { region: "华东", status: "已完成" },
+    });
+
+    expect(loader.store.getState().sources.details.params.filters).toEqual({
+      keep: "1",
+      region: "华东",
+      status: "已完成",
+    });
+
+    await loader.store.getState().select("orders", null);
+
+    expect(loader.store.getState().sources.details.params.filters).toEqual({ keep: "1" });
   });
 
   it("dispose 中止请求并清空全部运行时状态", async () => {
