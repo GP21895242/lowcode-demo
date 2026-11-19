@@ -33,6 +33,7 @@ export default (ctx: Context) => {
       ItemType.Modal,
       ItemType.Card,
       ItemType.TabPane,
+      ItemType.Carousel,
       ItemType.GridLayout,
     ],
   });

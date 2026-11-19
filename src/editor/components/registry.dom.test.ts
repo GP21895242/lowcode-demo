@@ -37,6 +37,7 @@ const REQUIRED = [
   ItemType.Modal,
   ItemType.Tabs,
   ItemType.TabPane,
+  ItemType.Carousel,
   ItemType.Chart,
   ItemType.GridLayout,
   ItemType.SearchForm,

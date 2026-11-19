@@ -19,6 +19,7 @@ export default (ctx: Context) => {
       ItemType.Space,
       ItemType.Card,
       ItemType.TabPane,
+      ItemType.Carousel,
       ItemType.GridLayout,
     ],
   });

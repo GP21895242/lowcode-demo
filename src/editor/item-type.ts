@@ -17,4 +17,5 @@ export const ItemType = {
   CardInstance: "CardInstance",
   Tabs: "Tabs",
   TabPane: "TabPane",
+  Carousel: "Carousel",
 };
