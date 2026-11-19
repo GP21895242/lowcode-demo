@@ -50,7 +50,7 @@ const EditLayout: React.FC<EditLayoutProps> = ({
       />
       {cardTemplate ? null : <MergeDialog />}
       <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1">
-        <ResizablePanel defaultSize={240} maxSize={400} minSize={200}>
+        <ResizablePanel defaultSize={320} minSize={280} maxSize={520}>
           <Sidebar onDragging={onDragging} materialMode={cardTemplate ? "card" : "page"} />
         </ResizablePanel>
         <ResizableHandle />

@@ -132,7 +132,7 @@ const ComponentItem: React.FC<ComponentItemProps> = ({
   return (
     <div
       ref={drag as any}
-      className="group flex cursor-move flex-col items-center gap-1.5 rounded-md border border-transparent px-2 py-3 text-center transition-colors hover:border-border hover:bg-muted/60"
+      className="group flex cursor-move flex-col items-center gap-1 rounded-md border border-transparent px-1 py-2 text-center transition-colors hover:border-border hover:bg-muted/60"
       style={{
         opacity,
       }}
