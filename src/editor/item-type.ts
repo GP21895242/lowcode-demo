@@ -19,4 +19,13 @@ export const ItemType = {
   TabPane: "TabPane",
   Carousel: "Carousel",
   Loop: "Loop",
+  Input: "Input",
+  Textarea: "Textarea",
+  Select: "Select",
+  RadioGroup: "RadioGroup",
+  CheckboxGroup: "CheckboxGroup",
+  Switch: "Switch",
+  Image: "Image",
+  Text: "Text",
+  Link: "Link",
 };

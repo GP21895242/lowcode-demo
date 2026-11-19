@@ -8,6 +8,12 @@ import {
 } from "../../components/ui/select";
 import type { ComponentSetter } from "../interface";
 import SettingFormItemInput from "./setting-form-item/input";
+import SettingFormItemOptions from "./setting-form-item/options";
+
+/** 解包 { type, value } 形式的属性值 */
+function unwrap(value: any) {
+  return value && typeof value === "object" && "value" in value ? value.value : value;
+}
 
 function CommonSetter({ setters }: { setters: ComponentSetter[] }) {
   return (
@@ -17,7 +23,11 @@ function CommonSetter({ setters }: { setters: ComponentSetter[] }) {
           {({ value, onChange }) => {
             if (setter.type === "select") {
               return (
-                <Select value={value} onValueChange={onChange} items={setter.options}>
+                <Select
+                  value={unwrap(value)}
+                  onValueChange={(next) => onChange({ type: "static", value: next })}
+                  items={setter.options}
+                >
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
@@ -30,6 +40,10 @@ function CommonSetter({ setters }: { setters: ComponentSetter[] }) {
                   </SelectContent>
                 </Select>
               );
+            }
+
+            if (setter.type === "options") {
+              return <SettingFormItemOptions value={value} onChange={onChange} />;
             }
 
             return <SettingFormItemInput value={value} onChange={onChange} />;
